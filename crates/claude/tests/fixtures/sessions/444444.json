@@ -1,0 +1,13 @@
+{
+  "pid": 444444,
+  "sessionId": "00000000-0000-4000-8000-000000000005",
+  "cwd": "/work/example",
+  "startedAt": 1795363351158,
+  "version": "9.9.9",
+  "kind": "interactive",
+  "entrypoint": "cli",
+  "name": "example-no-proc-start",
+  "status": "busy",
+  "updatedAt": 1795372085544,
+  "statusUpdatedAt": 1795372085544
+}
