@@ -1,11 +1,19 @@
 //! Entry point of the `dandelion` binary.
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use dandelion_core::BuildInfo;
-use dandelion_server::{app, config::BindAddr, openapi::ApiDoc, shutdown};
+use dandelion_server::{
+    app,
+    audit::AuditLog,
+    config::{self, BindAddr},
+    openapi::ApiDoc,
+    shutdown,
+    state::AppState,
+    storage,
+};
 use tokio::net::TcpListener;
 use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
@@ -27,6 +35,9 @@ enum Command {
         /// Loopback address to bind. Non-loopback addresses are refused.
         #[arg(long, default_value_t = BindAddr::DEFAULT, value_parser = clap::value_parser!(BindAddr))]
         bind: BindAddr,
+        /// Data directory for the SQLite database.
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
     },
     /// Print the `OpenAPI` document as JSON.
     Openapi,
@@ -39,9 +50,9 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     init_tracing();
 
-    let bind = match cli.command {
-        None => BindAddr::DEFAULT,
-        Some(Command::Serve { bind }) => bind,
+    let (bind, data_dir) = match cli.command {
+        None => (BindAddr::DEFAULT, None),
+        Some(Command::Serve { bind, data_dir }) => (bind, data_dir),
         Some(Command::Openapi) => {
             print_openapi()?;
             return Ok(());
@@ -52,7 +63,15 @@ async fn main() -> Result<()> {
         }
     };
 
-    serve(bind).await
+    let data_dir = config::data_dir(data_dir)?;
+    let database = config::database_path(&data_dir);
+    let pool = storage::open(&database)
+        .await
+        .with_context(|| format!("open database {}", database.display()))?;
+    tracing::info!(path = %database.display(), "database ready");
+    let state = AppState::new(AuditLog::new(pool));
+
+    serve(bind, state).await
 }
 
 fn init_tracing() {
@@ -75,14 +94,14 @@ fn check_assets() -> Result<()> {
     anyhow::bail!("embedded web UI is empty; build web/dist before the Rust binary")
 }
 
-async fn serve(bind: BindAddr) -> Result<()> {
+async fn serve(bind: BindAddr, state: AppState) -> Result<()> {
     let listener = TcpListener::bind(bind.socket_addr())
         .await
         .with_context(|| format!("bind {bind}"))?;
     let address: SocketAddr = listener.local_addr().context("read the bound address")?;
     tracing::info!(%address, "dandelion listening");
 
-    axum::serve(listener, app::build_router())
+    axum::serve(listener, app::build_router(state))
         .with_graceful_shutdown(shutdown::shutdown_signal())
         .await
         .context("serve HTTP")?;
@@ -92,6 +111,8 @@ async fn serve(bind: BindAddr) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::{Path, PathBuf};
+
     use clap::{CommandFactory, Parser};
 
     use super::{BindAddr, Cli, Command};
@@ -126,10 +147,22 @@ mod tests {
     #[test]
     fn serve_defaults_to_loopback() {
         let cli = Cli::try_parse_from(["dandelion", "serve"]).expect("cli parses");
-        let Some(Command::Serve { bind }) = cli.command else {
+        let Some(Command::Serve { bind, .. }) = cli.command else {
             panic!("serve subcommand expected");
         };
 
         assert_eq!(bind, BindAddr::DEFAULT);
+    }
+
+    #[test]
+    fn data_dir_flag_is_accepted() {
+        let cli = Cli::try_parse_from(["dandelion", "serve", "--data-dir", "/tmp/dandelion"])
+            .expect("cli parses");
+        let Some(Command::Serve { data_dir, .. }) = cli.command else {
+            panic!("serve subcommand expected");
+        };
+
+        assert_eq!(data_dir, Some(PathBuf::from("/tmp/dandelion")));
+        assert_eq!(data_dir.as_deref(), Some(Path::new("/tmp/dandelion")));
     }
 }
