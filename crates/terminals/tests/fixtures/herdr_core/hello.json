@@ -1,5 +1,5 @@
 {
-  "core": {"id": "88a46403d9bacc892f9acf46995005e9", "name": "dev-virtualbox"},
+  "core": {"id": "88a46403d9bacc892f9acf46995005e9", "name": "example-machine"},
   "features": ["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input"],
   "framed": false,
   "generation": 1,

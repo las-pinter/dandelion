@@ -48,7 +48,7 @@ Verified raw calls (Python, AF_UNIX, one connection, output trimmed):
     "keep":true,"labels":{"herdr.space":"sp..","herdr.tab":"tb..","herdr.seen":"155","where":"Persona Agents / 1"},
     "state":"live","status":null,"turn":155,..}, ...]}}
 -> {"jsonrpc":"2.0","id":3,"method":"hello","params":{"generation":1}}
-<- {"result":{"core":{"id":"88a464..","name":"dev-virtualbox"},"features":["framed","attach","events","status",
+<- {"result":{"core":{"id":"88a464..","name":"example-machine"},"features":["framed","attach","events","status",
     "shell","resize_notifications","automatic_input"],"framed":false,"generation":1,"methods":[...32...],"version":"0.1.19"}}
 -> {"jsonrpc":"2.0","id":4,"method":"nope"}
 <- {"error":{"code":-32601,"data":{"hint":"see `hc schema`","kind":"unknown_method"},"message":"unknown method \"nope\""},"id":4,"jsonrpc":"2.0"}
