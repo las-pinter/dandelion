@@ -1,0 +1,5 @@
+{
+  "complete": true,
+  "how": "screen",
+  "text": "bash-5.2$ echo PROBE_OK\nPROBE_OK\nbash-5.2$"
+}

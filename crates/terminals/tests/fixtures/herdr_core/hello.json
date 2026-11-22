@@ -1,0 +1,8 @@
+{
+  "core": {"id": "88a46403d9bacc892f9acf46995005e9", "name": "dev-virtualbox"},
+  "features": ["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input"],
+  "framed": false,
+  "generation": 1,
+  "methods": ["hello", "server.status", "terminal.run", "terminal.list", "terminal.get", "terminal.read", "terminal.attach", "terminal.send", "terminal.keys", "terminal.interrupt", "terminal.kill", "terminal.rm", "events.subscribe"],
+  "version": "0.1.19"
+}

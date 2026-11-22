@@ -1,0 +1,7 @@
+{"id":"sub1","result":{"type":"subscription_started"}}
+{"event":"pane_created","data":{"type":"pane_created","pane":{"pane_id":"w1:p3","terminal_id":"term-d","workspace_id":"w1","tab_id":"w1:t1","focused":false,"agent":null,"display_agent":null,"agent_status":"unknown","cwd":"/home/dev/project","foreground_cwd":"/home/dev/project","title":null,"terminal_title":"bash","terminal_title_stripped":"bash","label":null,"state_labels":{"branch":"main"},"revision":0,"scroll":{"offset_from_bottom":0,"max_offset_from_bottom":100,"viewport_rows":40}}}}
+{"event":"pane.agent_status_changed","data":{"type":"pane.agent_status_changed","pane_id":"w1:p1","workspace_id":"w1","agent":"claude","agent_status":"working"}}
+{"event":"pane_updated","data":{"type":"pane_updated","pane":{"pane_id":"w1:p1","terminal_id":"term-a","workspace_id":"w1","tab_id":"w1:t1","focused":true,"agent":"claude","display_agent":"Claude","agent_status":"working","cwd":"/home/dev/project","foreground_cwd":"/home/dev/project","title":"agent","terminal_title":"claude","terminal_title_stripped":"claude","label":"agent","state_labels":{"branch":"main"},"revision":0,"scroll":{"offset_from_bottom":0,"max_offset_from_bottom":100,"viewport_rows":40}}}}
+{"event":"pane_closed","data":{"type":"pane_closed","pane_id":"w1:p3","workspace_id":"w1"}}
+{"event":"workspace_renamed","data":{"type":"workspace_renamed","workspace_id":"w1","label":"renamed"}}
+{"event":"tab_created","data":{"type":"tab_created","tab_id":"w1:t2","workspace_id":"w1"}}

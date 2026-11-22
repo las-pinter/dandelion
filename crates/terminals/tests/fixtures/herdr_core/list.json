@@ -1,0 +1,64 @@
+{
+  "hidden_finished": 2,
+  "terminals": [
+    {
+      "address": "t11",
+      "name": "demo-agent",
+      "argv": ["claude"],
+      "cwd": "/home/dev/project",
+      "labels": {"purpose": "demo", "herdr.space": "sp1"},
+      "state": "live",
+      "created_ms": 1700000000000,
+      "cols": 120,
+      "rows": 40,
+      "title": "demo-agent",
+      "status": {
+        "app": "claude-code",
+        "kind": "permission",
+        "msg": "<redacted>",
+        "state": "blocked",
+        "title": "<redacted>"
+      },
+      "reported": true,
+      "turn": 4,
+      "foreground": {
+        "argv": ["claude"],
+        "cwd": "/home/dev/project",
+        "name": "claude",
+        "pid": 4242
+      }
+    },
+    {
+      "address": "t12",
+      "name": null,
+      "argv": ["bash"],
+      "cwd": "/tmp",
+      "labels": {},
+      "state": "live",
+      "created_ms": 1700000001000,
+      "cols": 80,
+      "rows": 24,
+      "title": "",
+      "reported": false,
+      "turn": 0
+    },
+    {
+      "address": "t13",
+      "name": "done-agent",
+      "argv": ["codex"],
+      "cwd": "/home/dev/other",
+      "labels": {"purpose": "demo"},
+      "state": "finished",
+      "created_ms": 1700000002000,
+      "finished_ms": 1700000010000,
+      "exit_code": 0,
+      "reason": "exited",
+      "cols": 100,
+      "rows": 30,
+      "title": "done-agent",
+      "status": {"app": "codex", "state": "done"},
+      "reported": true,
+      "turn": 7
+    }
+  ]
+}
