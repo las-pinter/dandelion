@@ -1,0 +1,19 @@
+[package]
+name = "dandelion-server"
+description = "The Dandelion server binary: HTTP API, WebSocket hub, embedded web UI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "dandelion"
+path = "src/main.rs"
+
+[dependencies]
+dandelion-core.workspace = true
+clap.workspace = true
+
+[lints]
+workspace = true
