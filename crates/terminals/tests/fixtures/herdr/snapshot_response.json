@@ -1,0 +1,163 @@
+{
+  "id": "cli:api:snapshot",
+  "result": {
+    "type": "session_snapshot",
+    "snapshot": {
+      "version": "0.9.5",
+      "protocol": 22,
+      "workspaces": [
+        {
+          "workspace_id": "w1",
+          "number": 1,
+          "label": "dandelion",
+          "focused": true,
+          "pane_count": 2,
+          "tab_count": 1,
+          "active_tab_id": "w1:t1",
+          "agent_status": "blocked",
+          "tokens": {
+            "ticket": "L11"
+          }
+        },
+        {
+          "workspace_id": "w2",
+          "number": 2,
+          "label": "other",
+          "focused": false,
+          "pane_count": 1,
+          "tab_count": 1,
+          "active_tab_id": "w2:t1",
+          "agent_status": "unknown"
+        }
+      ],
+      "tabs": [
+        {
+          "tab_id": "w1:t1",
+          "workspace_id": "w1",
+          "number": 1,
+          "label": "main",
+          "focused": true,
+          "pane_count": 2,
+          "agent_status": "blocked"
+        },
+        {
+          "tab_id": "w2:t1",
+          "workspace_id": "w2",
+          "number": 1,
+          "label": "shell",
+          "focused": false,
+          "pane_count": 1,
+          "agent_status": "unknown"
+        }
+      ],
+      "panes": [
+        {
+          "pane_id": "w1:p1",
+          "terminal_id": "term-a",
+          "workspace_id": "w1",
+          "tab_id": "w1:t1",
+          "focused": true,
+          "agent": "claude",
+          "display_agent": "Claude",
+          "agent_status": "blocked",
+          "cwd": "/home/dev/project",
+          "foreground_cwd": "/home/dev/project",
+          "title": "agent",
+          "terminal_title": "claude",
+          "terminal_title_stripped": "claude",
+          "label": "agent",
+          "state_labels": {
+            "branch": "main"
+          },
+          "revision": 0,
+          "scroll": {
+            "offset_from_bottom": 0,
+            "max_offset_from_bottom": 100,
+            "viewport_rows": 40
+          }
+        },
+        {
+          "pane_id": "w1:p2",
+          "terminal_id": "term-b",
+          "workspace_id": "w1",
+          "tab_id": "w1:t1",
+          "focused": false,
+          "agent": null,
+          "display_agent": null,
+          "agent_status": "unknown",
+          "cwd": "/home/dev/project",
+          "foreground_cwd": "/home/dev/project",
+          "title": null,
+          "terminal_title": "bash",
+          "terminal_title_stripped": "bash",
+          "label": null,
+          "state_labels": {
+            "branch": "main"
+          },
+          "revision": 0,
+          "scroll": {
+            "offset_from_bottom": 0,
+            "max_offset_from_bottom": 100,
+            "viewport_rows": 40
+          }
+        },
+        {
+          "pane_id": "w2:p1",
+          "terminal_id": "term-c",
+          "workspace_id": "w2",
+          "tab_id": "w2:t1",
+          "focused": true,
+          "agent": "pi",
+          "display_agent": "Claude",
+          "agent_status": "working",
+          "cwd": "/tmp",
+          "foreground_cwd": "/tmp",
+          "title": "worker",
+          "terminal_title": "claude",
+          "terminal_title_stripped": "claude",
+          "label": "worker",
+          "state_labels": {
+            "branch": "main"
+          },
+          "revision": 0,
+          "scroll": {
+            "offset_from_bottom": 0,
+            "max_offset_from_bottom": 100,
+            "viewport_rows": 40
+          }
+        }
+      ],
+      "layouts": [],
+      "agents": [
+        {
+          "terminal_id": "term-a",
+          "agent": "claude",
+          "display_agent": "Claude",
+          "agent_status": "blocked",
+          "workspace_id": "w1",
+          "tab_id": "w1:t1",
+          "pane_id": "w1:p1",
+          "focused": true,
+          "revision": 0,
+          "name": "reviewer",
+          "completion_seq": 2,
+          "state_change_seq": 3
+        },
+        {
+          "terminal_id": "term-c",
+          "agent": "pi",
+          "display_agent": "Pi",
+          "agent_status": "working",
+          "workspace_id": "w2",
+          "tab_id": "w2:t1",
+          "pane_id": "w2:p1",
+          "focused": true,
+          "revision": 0,
+          "name": "builder",
+          "completion_seq": null,
+          "state_change_seq": 1
+        }
+      ]
+    }
+  }
+}

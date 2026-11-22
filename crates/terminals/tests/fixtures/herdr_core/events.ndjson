@@ -1,0 +1,11 @@
+{"jsonrpc":"2.0","method":"event","params":{"seq":4538,"terminal":"t14","type":"created","data":{"address":"t14","name":"dandelion-probe","argv":["bash","--norc","--noprofile"],"cwd":"/home/dev","labels":{"purpose":"dandelion-test"},"state":"live","created_ms":1700000100000,"cols":80,"rows":24,"title":"","reported":false,"turn":0}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4539,"terminal":"t14","type":"foreground","data":{"argv":["bash","--norc","--noprofile"],"cwd":"/home/dev","name":"bash","pid":3081400}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4540,"terminal":"t14","type":"labels","data":{"labels":{"probe":"demo","purpose":"dandelion-test"}}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4541,"terminal":"t14","type":"status","data":{"records":{},"reported":true,"status":{"app":"claude-code","msg":"<redacted>","state":"working"}}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4542,"terminal":"t14","type":"turn","data":{"state":"blocked","turn":1}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4543,"terminal":"t14","type":"size","data":{"cols":100,"rows":30}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4544,"terminal":"t14","type":"title","data":{"title":"agent title"}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4545,"terminal":"t14","type":"finished","data":{"reason":"killed","exit_code":null,"signal":1,"finished_ms":1700000200000}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":4546,"terminal":"t14","type":"removed","data":{}}}
+{"jsonrpc":"2.0","method":"heartbeat","params":{"seq":4547}}
+{"jsonrpc":"2.0","method":"missed","params":{"seq":4600,"terminals":[{"address":"t14","labels":{"purpose":"dandelion-test"},"argv":["bash"],"cwd":"/home/dev","state":"live","created_ms":1700000300000,"screen":"exact","cols":80,"rows":24,"title":"after-missed","reported":false,"turn":0}]}}

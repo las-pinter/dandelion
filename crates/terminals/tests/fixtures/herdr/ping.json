@@ -1,0 +1,10 @@
+{
+  "type": "pong",
+  "version": "0.9.5",
+  "protocol": 22,
+  "capabilities": {
+    "live_handoff": true,
+    "surface_interest": true,
+    "health_check": true
+  }
+}
