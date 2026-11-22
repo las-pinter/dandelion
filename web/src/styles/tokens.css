@@ -1,69 +1,94 @@
-/* Design tokens: the single source of colors, radii, and fonts for both themes. */
+/*
+ * Design tokens: the single source of colors, radii, and effects.
+ * Direction: Mission Control (see docs/design.md). Dark is the primary theme;
+ * light is the alternate. Components use the semantic names only.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.75rem;
+
+  --background: #f6f7f9;
+  --foreground: #0b0e12;
+  --card: #ffffff;
+  --card-foreground: #0b0e12;
+  --popover: #ffffff;
+  --popover-foreground: #0b0e12;
+  --primary: #4d6b00;
+  --primary-foreground: #ffffff;
+  --secondary: #eceef2;
+  --secondary-foreground: #0b0e12;
+  --muted: #eceef2;
+  --muted-foreground: #5a6472;
+  --accent: #e9ecf1;
+  --accent-foreground: #0b0e12;
+  --destructive: #d23b3b;
+  --border: #e2e5ea;
+  --input: #d5d9e0;
+  --ring: #4d6b00;
+
+  --brand: #d9f75a;
+  --glow: 0 0 0 1px rgb(77 107 0 / 0.15);
+  --status-working: #4d6b00;
+  --status-waiting: #a35f00;
+  --status-idle: #5a6472;
+  --status-done: #0a7f91;
+  --status-error: #d23b3b;
+
+  --chart-1: #4d6b00;
+  --chart-2: #0a7f91;
+  --chart-3: #a35f00;
+  --chart-4: #6d4fd1;
+  --chart-5: #5a6472;
+
+  --sidebar: #eef0f3;
+  --sidebar-foreground: #0b0e12;
+  --sidebar-primary: #4d6b00;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e2e5ea;
+  --sidebar-accent-foreground: #0b0e12;
+  --sidebar-border: #e2e5ea;
+  --sidebar-ring: #4d6b00;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #07090d;
+  --foreground: #e8ecf2;
+  --card: #0e1117;
+  --card-foreground: #e8ecf2;
+  --popover: #11151c;
+  --popover-foreground: #e8ecf2;
+  --primary: #d9f75a;
+  --primary-foreground: #0b0e12;
+  --secondary: #161b23;
+  --secondary-foreground: #e8ecf2;
+  --muted: #141922;
+  --muted-foreground: #8c96a5;
+  --accent: #161b23;
+  --accent-foreground: #f2f5f9;
+  --destructive: #ff5d5d;
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.12);
+  --ring: #d9f75a;
+
+  --brand: #d9f75a;
+  --glow: 0 0 24px rgb(217 247 90 / 0.25);
+  --status-working: #d9f75a;
+  --status-waiting: #ffb547;
+  --status-idle: #7d8797;
+  --status-done: #5ae4f7;
+  --status-error: #ff5d5d;
+
+  --chart-1: #d9f75a;
+  --chart-2: #5ae4f7;
+  --chart-3: #ffb547;
+  --chart-4: #b69cff;
+  --chart-5: #8c96a5;
+
+  --sidebar: #07090d;
+  --sidebar-foreground: #c9d1dc;
+  --sidebar-primary: #d9f75a;
+  --sidebar-primary-foreground: #0b0e12;
+  --sidebar-accent: rgb(217 247 90 / 0.08);
+  --sidebar-accent-foreground: #f2f5f9;
+  --sidebar-border: rgb(255 255 255 / 0.06);
+  --sidebar-ring: #d9f75a;
 }

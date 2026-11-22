@@ -32,7 +32,7 @@ lists every recipe.
 ## Code rules
 
 - Rust: workspace lints (clippy pedantic, `unsafe` forbidden) apply to every crate via `[lints] workspace = true`. Errors are `thiserror` types in libraries, `anyhow` only in the binary.
-- Web: strict TypeScript, no `any`. Style through Tailwind and the design tokens in `web/src/styles/tokens.css`.
+- Web: strict TypeScript, no `any`. Style through Tailwind and the design tokens in `web/src/styles/tokens.css`; follow `docs/design.md`.
 - Files stay under 500 lines; split by responsibility before that.
 - Every mutating API action writes an audit log entry.
 - Tests sit next to the code: Rust `#[cfg(test)]` modules or `crates/<domain>/tests/`, web `*.test.ts(x)` beside the source.
