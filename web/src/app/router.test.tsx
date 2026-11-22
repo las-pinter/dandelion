@@ -23,6 +23,12 @@ describe('buildRoutes', () => {
     expect(await screen.findByText('page one')).toBeInTheDocument()
   })
 
+  it('renders a page for its nested path', () => {
+    renderAt('/one/detail', onePage)
+
+    expect(screen.getByText('page one')).toBeInTheDocument()
+  })
+
   it('shows the not-found screen for an unknown path', () => {
     renderAt('/nope', onePage)
 
