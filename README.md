@@ -21,3 +21,7 @@ just         # list every command
 
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
+
+## License
+
+[MIT](LICENSE)
