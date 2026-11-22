@@ -1,0 +1,21 @@
+{
+  "channel": null,
+  "seq": 4500,
+  "terminals": [
+    {
+      "address": "t11",
+      "name": "demo-agent",
+      "argv": ["claude"],
+      "cwd": "/home/dev/project",
+      "labels": {"purpose": "demo"},
+      "state": "live",
+      "created_ms": 1700000000000,
+      "cols": 120,
+      "rows": 40,
+      "title": "demo-agent",
+      "status": {"app": "claude-code", "state": "working"},
+      "reported": true,
+      "turn": 4
+    }
+  ]
+}
