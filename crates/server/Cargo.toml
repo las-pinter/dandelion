@@ -11,9 +11,28 @@ publish.workspace = true
 name = "dandelion"
 path = "src/main.rs"
 
+[lib]
+name = "dandelion_server"
+path = "src/lib.rs"
+
 [dependencies]
-dandelion-core.workspace = true
+anyhow.workspace = true
+axum.workspace = true
 clap.workspace = true
+dandelion-core.workspace = true
+mime_guess.workspace = true
+rust-embed.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+utoipa.workspace = true
+
+[dev-dependencies]
+http-body-util.workspace = true
+tower.workspace = true
 
 [lints]
 workspace = true

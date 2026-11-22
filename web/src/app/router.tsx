@@ -11,7 +11,15 @@ export function buildRoutes(registered: PageDefinition[]): RouteObject[] {
       children: [
         // Only redirect when a target exists; redirecting `/` to `/` would loop.
         ...(first ? [{ index: true, element: <Navigate to={first.path} replace /> }] : []),
-        ...registered.map(({ path, Component }) => ({ path, element: <Component /> })),
+        ...registered.flatMap(({ path, Component }) =>
+          path === '/'
+            ? [{ path, element: <Component /> }]
+            : [
+                { path, element: <Component /> },
+                // Nested paths stay inside their page until it declares child routes.
+                { path: `${path}/*`, element: <Component /> },
+              ],
+        ),
         { path: '*', element: <NotFound /> },
       ],
     },
