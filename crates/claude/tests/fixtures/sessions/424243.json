@@ -1,0 +1,15 @@
+{
+  "pid": 424243,
+  "sessionId": "00000000-0000-4000-8000-000000000002",
+  "cwd": "/work/example",
+  "startedAt": 1795363351158,
+  "procStart": "7002",
+  "version": "9.9.9",
+  "kind": "interactive",
+  "entrypoint": "cli",
+  "name": "example-waiting",
+  "status": "waiting",
+  "waitingFor": "permission prompt",
+  "updatedAt": 1795372085544,
+  "statusUpdatedAt": 1795372085544
+}
