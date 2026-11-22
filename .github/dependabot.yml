@@ -9,6 +9,10 @@ updates:
   - package-ecosystem: npm
     directory: /web
     schedule: { interval: weekly }
+    ignore:
+      # Types follow the Node runtime major used in CI and on the host.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       web-minor:
         update-types: [minor, patch]
