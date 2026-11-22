@@ -10,16 +10,23 @@ license = "MIT"
 publish = false
 
 [workspace.dependencies]
-dandelion-core = { path = "crates/core" }
 anyhow = "1.0.104"
+axum = "0.8.9"
 bollard = "0.21.1"
 clap = { version = "4.6.9", features = ["derive"] }
+dandelion-core = { path = "crates/core" }
 futures-util = "0.3.34"
-rustix = { version = "1.1.6", features = ["param", "process"] }
+http-body-util = "0.1.5"
+mime_guess = "2.0.5"
+rust-embed = "8.14.0"
+rustix = { version = "1.1.6", features = ["fs", "param", "process"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 thiserror = "2.0.21"
-tokio = { version = "1.54.1", features = ["io-util", "process", "sync", "time"] }
+tokio = { version = "1.54.1", features = ["io-util", "macros", "net", "process", "rt", "rt-multi-thread", "signal", "sync", "time"] }
+tower = "0.5.3"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 utoipa = { version = "6.0.0", features = ["macros"] }
 zbus = { version = "6.5.0", features = ["tokio"] }
 

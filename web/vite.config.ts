@@ -10,7 +10,8 @@ export default defineConfig({
   },
   server: {
     // The Rust server serves the API; the dev server proxies to it.
-    proxy: { '/api': { target: 'https://127.0.0.1:7443', secure: false, ws: true } },
+    // Plain HTTP until TLS lands with auth.
+    proxy: { '/api': { target: 'http://127.0.0.1:7443', ws: true } },
   },
   test: {
     environment: 'jsdom',

@@ -1,5 +1,5 @@
 import { LayoutDashboard } from 'lucide-react'
-import { buildPageRegistry, PageRegistryError, type PageModule } from './page-registry'
+import { buildPageRegistry, findPage, PageRegistryError, type PageModule } from './page-registry'
 
 const Empty = () => null
 
@@ -36,5 +36,42 @@ describe('buildPageRegistry', () => {
     const modules = { 'broken.tsx': {} as PageModule }
 
     expect(() => buildPageRegistry(modules)).toThrow(/does not export/)
+  })
+})
+
+describe('findPage', () => {
+  const registered = buildPageRegistry({
+    dashboard: pageModule('/dashboard', 'Dashboard', 0),
+    agents: pageModule('/agents', 'Agents', 1),
+  })
+
+  it('finds the page for its own path and nested paths', () => {
+    expect(findPage(registered, '/agents')?.title).toBe('Agents')
+    expect(findPage(registered, '/agents/review-bot')?.title).toBe('Agents')
+  })
+
+  it('returns undefined for an unknown path', () => {
+    expect(findPage(registered, '/missing')).toBeUndefined()
+  })
+
+  it('gives a nested page priority over its parent, in either registry order', () => {
+    const childFirst = buildPageRegistry({
+      child: pageModule('/agents/review-bot', 'Review bot', 0),
+      parent: pageModule('/agents', 'Agents', 1),
+    })
+    const parentFirst = buildPageRegistry({
+      parent: pageModule('/agents', 'Agents', 0),
+      child: pageModule('/agents/review-bot', 'Review bot', 1),
+    })
+
+    expect(findPage(childFirst, '/agents/review-bot')?.title).toBe('Review bot')
+    expect(findPage(parentFirst, '/agents/review-bot')?.title).toBe('Review bot')
+  })
+
+  it('matches a root page only at the root', () => {
+    const withRoot = buildPageRegistry({ root: pageModule('/', 'Home', 0) })
+
+    expect(findPage(withRoot, '/')?.title).toBe('Home')
+    expect(findPage(withRoot, '/anything')).toBeUndefined()
   })
 })

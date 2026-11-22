@@ -12,7 +12,14 @@ const pages: PageDefinition[] = [
     order: 0,
     Component: () => <p>Dashboard</p>,
   },
-  { path: '/agents', title: 'Agents', icon: Bot, order: 1, Component: () => <p>Agents</p> },
+  {
+    path: '/agents',
+    title: 'Agents',
+    icon: Bot,
+    order: 1,
+    badge: '1',
+    Component: () => <p>Agents</p>,
+  },
   {
     path: '/terminal',
     title: 'Terminal',
