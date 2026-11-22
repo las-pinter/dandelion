@@ -16,8 +16,13 @@ corepack (pnpm), [`just`](https://github.com/casey/just), `cargo-nextest`,
 ```sh
 just setup   # install web dependencies and git hooks
 just ci      # the full gate: format, typecheck, lint, test, build
+just gen     # regenerate the OpenAPI document and the TypeScript client
 just         # list every command
 ```
+
+The server listens on `http://127.0.0.1:7443` and serves `GET /api/health`.
+`just dev-web` proxies `/api` there. Non-loopback bind addresses are refused
+until authentication and TLS exist.
 
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).

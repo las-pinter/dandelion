@@ -41,6 +41,18 @@ lint:
 typecheck:
     {{web}} typecheck
 
+# Regenerate the OpenAPI document and its TypeScript client.
+# dlx runs the generator with its own TypeScript 5; the app builds with TypeScript 7,
+# which no longer ships the compiler API the generator needs.
+gen:
+    mkdir -p target
+    cargo run --quiet --locked -p dandelion-server -- openapi > target/openapi.json
+    pnpm dlx openapi-typescript@7.13.0 target/openapi.json -o web/src/api/gen/schema.d.ts
+
+# Fail when the generated client is stale.
+gen-check: gen
+    @git diff --exit-code -- web/src/api/gen/schema.d.ts
+
 # Run all tests.
 test:
     cargo nextest run --workspace --locked --no-tests=warn
@@ -55,6 +67,7 @@ build:
     {{web}} build
     {{web}} build-storybook --quiet --output-dir dist-storybook
     cargo build --release --locked
+    ./target/release/dandelion assets
 
 # The full gate. CI runs exactly this; run it before every push.
-ci: fmt-check typecheck lint test deny build
+ci: fmt-check typecheck gen-check lint test deny build
