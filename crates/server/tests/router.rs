@@ -2,15 +2,25 @@
 
 use axum::{
     body::Body,
-    http::{Request, StatusCode, header},
+    extract::State,
+    http::{Method, Request, StatusCode, header},
     response::Response,
+    routing::post,
 };
-use dandelion_server::app::build_router;
+use dandelion_server::{
+    app::{build_router, router},
+    audit::{AuditEntry, AuditLog},
+    state::AppState,
+};
 use http_body_util::BodyExt;
 use tower::ServiceExt;
 
+async fn test_state() -> AppState {
+    AppState::new(AuditLog::in_memory().await.expect("in-memory audit log"))
+}
+
 async fn send(uri: &str) -> Response {
-    build_router()
+    build_router(test_state().await)
         .oneshot(
             Request::builder()
                 .uri(uri)
@@ -19,6 +29,20 @@ async fn send(uri: &str) -> Response {
         )
         .await
         .expect("the router answers")
+}
+
+async fn test_mutation(State(state): State<AppState>) -> StatusCode {
+    state
+        .audit
+        .record(AuditEntry {
+            actor: "test",
+            action: "test.mutate",
+            target: "thing",
+            detail: None,
+        })
+        .await
+        .expect("audit write");
+    StatusCode::NO_CONTENT
 }
 
 async fn json_body(response: Response) -> serde_json::Value {
@@ -69,4 +93,31 @@ async fn openapi_document_exposes_health() {
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["paths"]["/api/health"].is_object());
+}
+
+#[tokio::test]
+async fn mutating_handler_writes_one_audit_row() {
+    let state = test_state().await;
+    let audit = state.audit.clone();
+    let app = router()
+        .route("/api/test-mutation", post(test_mutation))
+        .with_state(state);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/test-mutation")
+                .body(Body::empty())
+                .expect("the request builder is valid"),
+        )
+        .await
+        .expect("the router answers");
+    let records = audit.recent(10).await.expect("read the audit log");
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].actor, "test");
+    assert_eq!(records[0].action, "test.mutate");
+    assert_eq!(records[0].target, "thing");
 }

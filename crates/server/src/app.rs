@@ -4,7 +4,7 @@ use axum::{Json, Router, http::StatusCode, routing::get};
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::{health, openapi, static_files};
+use crate::{health, openapi, state::AppState, static_files};
 
 /// Error body returned by API routes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
@@ -15,12 +15,17 @@ pub struct ApiError {
     pub message: String,
 }
 
-/// Builds the application router.
+/// Builds the application router with state applied.
+pub fn build_router(state: AppState) -> Router {
+    router().with_state(state)
+}
+
+/// Builds the router before state is applied; tests add routes to this.
 ///
 /// API routes live under `/api` and answer unknown paths with JSON. Every
 /// other path falls through to the embedded web application.
-pub fn build_router() -> Router {
-    let api = Router::new()
+pub fn router() -> Router<AppState> {
+    let api: Router<AppState> = Router::new()
         .route("/health", get(health::health))
         .route("/openapi.json", get(openapi::openapi_json))
         .fallback(api_not_found);

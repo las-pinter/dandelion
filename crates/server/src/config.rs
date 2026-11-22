@@ -5,8 +5,11 @@
 //! fails loudly instead of exposing the API on the network.
 
 use std::{
+    env,
+    ffi::OsString,
     fmt,
     net::{AddrParseError, Ipv4Addr, SocketAddr, SocketAddrV4},
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -67,9 +70,73 @@ impl fmt::Display for BindAddr {
     }
 }
 
+/// Why a data directory could not be chosen.
+#[derive(Debug, Error)]
+pub enum DataDirError {
+    /// No explicit value and no usable environment variable.
+    #[error("cannot choose a data directory: set DANDELION_DATA_DIR, XDG_DATA_HOME, or HOME")]
+    NoCandidate,
+    /// An explicit path was supplied but is empty.
+    #[error("the data directory path is empty")]
+    Empty,
+}
+
+/// Resolves the data directory.
+///
+/// Order: `DANDELION_DATA_DIR`, `$XDG_DATA_HOME/dandelion`, then
+/// `$HOME/.local/share/dandelion`. An explicit `--data-dir` wins over all.
+pub fn data_dir(explicit: Option<PathBuf>) -> Result<PathBuf, DataDirError> {
+    choose_data_dir(
+        explicit,
+        env::var_os("DANDELION_DATA_DIR"),
+        env::var_os("XDG_DATA_HOME"),
+        env::var_os("HOME"),
+    )
+}
+
+fn choose_data_dir(
+    explicit: Option<PathBuf>,
+    env_dir: Option<OsString>,
+    xdg: Option<OsString>,
+    home: Option<OsString>,
+) -> Result<PathBuf, DataDirError> {
+    if let Some(dir) = explicit {
+        if dir.as_os_str().is_empty() {
+            return Err(DataDirError::Empty);
+        }
+        return Ok(dir);
+    }
+    if let Some(dir) = non_empty(env_dir) {
+        return Ok(PathBuf::from(dir));
+    }
+    if let Some(dir) = non_empty(xdg) {
+        return Ok(PathBuf::from(dir).join("dandelion"));
+    }
+    if let Some(dir) = non_empty(home) {
+        return Ok(PathBuf::from(dir).join(".local/share/dandelion"));
+    }
+
+    Err(DataDirError::NoCandidate)
+}
+
+fn non_empty(value: Option<OsString>) -> Option<OsString> {
+    value.filter(|value| !value.is_empty())
+}
+
+/// The SQLite file inside the data directory.
+#[must_use]
+pub fn database_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("dandelion.db")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{BindAddr, BindError};
+    use std::{
+        ffi::OsString,
+        path::{Path, PathBuf},
+    };
+
+    use super::{BindAddr, BindError, DataDirError, choose_data_dir, database_path};
 
     fn parse(raw: &str) -> Result<BindAddr, BindError> {
         raw.parse()
@@ -112,5 +179,81 @@ mod tests {
     #[test]
     fn displays_the_socket_address() {
         assert_eq!(BindAddr::DEFAULT.to_string(), "127.0.0.1:7443");
+    }
+
+    // Mirrors the `Option<OsString>` parameters so the cases stay readable.
+    #[allow(clippy::unnecessary_wraps)]
+    fn os(value: &str) -> Option<OsString> {
+        Some(OsString::from(value))
+    }
+
+    #[test]
+    fn explicit_data_dir_wins() {
+        let chosen = choose_data_dir(
+            Some(PathBuf::from("/explicit")),
+            os("/env"),
+            os("/xdg"),
+            os("/home"),
+        );
+
+        assert_eq!(chosen.ok(), Some(PathBuf::from("/explicit")));
+    }
+
+    #[test]
+    fn empty_explicit_path_is_rejected() {
+        assert!(matches!(
+            choose_data_dir(Some(PathBuf::new()), None, None, None),
+            Err(DataDirError::Empty)
+        ));
+    }
+
+    #[test]
+    fn env_data_dir_wins_over_xdg_and_home() {
+        let chosen = choose_data_dir(None, os("/env"), os("/xdg"), os("/home"));
+
+        assert_eq!(chosen.ok(), Some(PathBuf::from("/env")));
+    }
+
+    #[test]
+    fn xdg_data_dir_appends_dandelion() {
+        let chosen = choose_data_dir(None, None, os("/xdg"), os("/home"));
+
+        assert_eq!(chosen.ok(), Some(PathBuf::from("/xdg/dandelion")));
+    }
+
+    #[test]
+    fn home_fallback_appends_local_share() {
+        let chosen = choose_data_dir(None, None, None, os("/home"));
+
+        assert_eq!(
+            chosen.ok(),
+            Some(PathBuf::from("/home/.local/share/dandelion"))
+        );
+    }
+
+    #[test]
+    fn empty_values_are_ignored() {
+        let chosen = choose_data_dir(None, os(""), os(""), os("/home"));
+
+        assert_eq!(
+            chosen.ok(),
+            Some(PathBuf::from("/home/.local/share/dandelion"))
+        );
+    }
+
+    #[test]
+    fn no_candidate_is_an_error() {
+        assert!(matches!(
+            choose_data_dir(None, None, None, None),
+            Err(DataDirError::NoCandidate)
+        ));
+    }
+
+    #[test]
+    fn database_path_appends_the_file_name() {
+        assert_eq!(
+            database_path(Path::new("/var/lib/dandelion")),
+            PathBuf::from("/var/lib/dandelion/dandelion.db")
+        );
     }
 }

@@ -24,6 +24,12 @@ The server listens on `http://127.0.0.1:7443` and serves `GET /api/health`.
 `just dev-web` proxies `/api` there. Non-loopback bind addresses are refused
 until authentication and TLS exist.
 
+The SQLite database path is chosen in this order: `--data-dir`,
+`DANDELION_DATA_DIR`, `$XDG_DATA_HOME/dandelion`, then
+`~/.local/share/dandelion`. The directory this process creates is private
+(`0700`) and the database file is `0600`. Embedded migrations run on start, and
+control actions append to the `audit_log` table.
+
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
 

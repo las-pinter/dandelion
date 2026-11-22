@@ -4,8 +4,11 @@
 //! lets the router be tested without binding a socket.
 
 pub mod app;
+pub mod audit;
 pub mod config;
 pub mod health;
 pub mod openapi;
 pub mod shutdown;
+pub mod state;
 pub mod static_files;
+pub mod storage;
