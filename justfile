@@ -19,9 +19,15 @@ dev-web:
     {{web}} dev
 
 # Expose loopback Dandelion on the tailnet through Tailscale's HTTPS proxy.
-# The operator owns this command; Dandelion never changes host networking.
+# `serve` writes host configuration, so it needs root; a sudo prompt is
+# expected. Dandelion itself never changes host networking.
 tailnet-serve:
-    tailscale serve --bg 7443
+    sudo tailscale serve --bg 7443
+
+# One-time alternative: let the current user manage serve config without sudo.
+# After this, plain `tailscale serve --bg 7443` works.
+tailnet-operator:
+    sudo tailscale set --operator=$USER
 
 # Browse and build components in isolation.
 storybook:
