@@ -44,6 +44,7 @@ const snapshot: AgentsSnapshot = {
 const claude: ClaudeAgent = {
   terminal: 't7',
   sessionId: '0f3c2b1a-aaaa-bbbb-cccc-0123456789ab',
+  cwd: '/home/dev/dandelion',
   name: 'dandelion-a6',
   agent: null,
   version: '2.1.330',
@@ -98,6 +99,22 @@ describe('AgentsPage', () => {
 
     expect(screen.getByText('Claude session')).toBeInTheDocument()
     expect(screen.getByText('0f3c2b1a')).toBeInTheDocument()
+  })
+
+  it('lists a Claude session outside herdr as unmanaged', () => {
+    useAgents.mockReturnValue(
+      state({
+        snapshot: {
+          ...snapshot,
+          claude: [{ ...claude, terminal: null, name: 'plain-shell-session', cwd: '/tmp/plain' }],
+        },
+      }),
+    )
+
+    render(<AgentsPage />)
+
+    expect(screen.getByText('unmanaged')).toBeInTheDocument()
+    expect(screen.getByText('plain-shell-session')).toBeInTheDocument()
   })
 
   it('runs an action on the selected agent', async () => {

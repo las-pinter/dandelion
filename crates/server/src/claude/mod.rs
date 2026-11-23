@@ -28,6 +28,8 @@ pub struct ClaudeAgent {
     pub terminal: Option<String>,
     /// Session id, used to locate the transcript.
     pub session_id: String,
+    /// Working directory the session was launched in.
+    pub cwd: String,
     /// Human-readable session name, when set.
     pub name: Option<String>,
     /// Agent name when the session runs an agent.
@@ -175,6 +177,7 @@ impl ClaudeMonitor {
                 agents.push(ClaudeAgent {
                     terminal: session.terminal_id.clone(),
                     session_id: session.session_id.clone(),
+                    cwd: session.cwd.clone(),
                     name: session.name.clone(),
                     agent: session.agent.clone(),
                     version: session.version.clone(),
@@ -316,6 +319,7 @@ mod tests {
         let agent = agents.first().expect("one session");
         assert_eq!(agent.terminal.as_deref(), Some("t42"));
         assert_eq!(agent.session_id, "session-424242");
+        assert_eq!(agent.cwd, "/work/example");
         assert_eq!(agent.status, Some(SessionStatus::Waiting));
         assert_eq!(agent.waiting_for.as_deref(), Some("permission prompt"));
         assert_eq!(agent.usage.tokens.input_tokens, 10);

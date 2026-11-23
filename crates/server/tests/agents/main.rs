@@ -242,13 +242,24 @@ async fn the_snapshot_carries_the_claude_session() {
     let body = json_body(response).await;
 
     assert_eq!(status, StatusCode::OK);
-    let session = &body["claude"][0];
-    assert_eq!(session["terminal"], TERMINAL);
+    let sessions = body["claude"].as_array().expect("a Claude list");
+    let session = sessions
+        .iter()
+        .find(|entry| entry["terminal"] == TERMINAL)
+        .expect("the managed session");
     assert_eq!(session["sessionId"], "session-424242");
+    assert_eq!(session["cwd"], "/work/example");
     assert_eq!(session["status"], "waiting");
     assert_eq!(session["waitingFor"], "permission prompt");
     assert_eq!(session["usage"]["tokens"]["inputTokens"], 10);
     assert_eq!(session["usage"]["messages"], 1);
+
+    let unmanaged = sessions
+        .iter()
+        .find(|entry| entry["terminal"].is_null())
+        .expect("the session outside herdr");
+    assert_eq!(unmanaged["sessionId"], "session-424243");
+    assert_eq!(unmanaged["cwd"], "/work/plain");
 }
 
 #[tokio::test]

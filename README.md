@@ -109,7 +109,8 @@ through the audited action API. State changes arrive on the `agents` WebSocket
 topic. When a session's Claude Code state directory is readable, the detail
 panel also shows the session id, model, token totals, estimated cost, and what
 a waiting session waits for; those totals come from tailing the transcript for
-accounting fields only. herdr-core has no approve call, so approval presses
+accounting fields only. A Claude session started outside herdr (a plain shell)
+still appears in the list, marked unmanaged and listed without controls. herdr-core has no approve call, so approval presses
 Enter and denial presses Escape. Starting an agent means
 running a command line in a directory, usually a worktree path; herdr-core has
 no workspace object of its own.

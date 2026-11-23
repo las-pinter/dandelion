@@ -647,6 +647,8 @@ export interface components {
         ClaudeAgent: {
             /** @description Agent name when the session runs an agent. */
             agent?: string | null;
+            /** @description Working directory the session was launched in. */
+            cwd: string;
             /** @description Human-readable session name, when set. */
             name?: string | null;
             /** @description Session id, used to locate the transcript. */

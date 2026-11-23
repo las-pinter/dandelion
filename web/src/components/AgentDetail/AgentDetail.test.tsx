@@ -39,6 +39,7 @@ const blocked: AgentInfo = {
 const claude: ClaudeAgent = {
   terminal: 't7',
   sessionId: '0f3c2b1a-aaaa-bbbb-cccc-0123456789ab',
+  cwd: '/home/dev/dandelion',
   name: 'dandelion-a6',
   agent: null,
   version: '2.1.330',

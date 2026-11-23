@@ -45,6 +45,12 @@ pub fn claude_fixture() -> ClaudeFixture {
         r#"{"pid":424242,"sessionId":"session-424242","cwd":"/work/example","procStart":"7001","version":"9.9.9","name":"example-session","agent":"example-agent","status":"waiting","waitingFor":"permission prompt","updatedAt":1795372085544}"#,
     )
     .expect("session record");
+    // A session outside herdr: no HC_TERMINAL_ID in its environment.
+    fs::write(
+        claude_dir.join("sessions").join("424243.json"),
+        r#"{"pid":424243,"sessionId":"session-424243","cwd":"/work/plain","procStart":"7002","version":"9.9.9","name":"plain-shell-session","status":"idle","updatedAt":1795372085544}"#,
+    )
+    .expect("unmanaged session record");
 
     let project = claude_dir.join("projects").join("-work-example");
     fs::create_dir_all(&project).expect("project dir");
@@ -70,6 +76,15 @@ pub fn claude_fixture() -> ClaudeFixture {
         b"PATH=/usr/bin\0HC_TERMINAL_ID=t7\0",
     )
     .expect("environ");
+
+    // A live process with no herdr terminal in its environment.
+    let plain_proc_dir = proc_root.join("424243");
+    fs::create_dir_all(&plain_proc_dir).expect("plain proc dir");
+    fs::write(
+        plain_proc_dir.join("stat"),
+        "424243 (claude) R 1 424243 424243 0 -1 4194304 100 0 0 0 1 2 0 0 20 0 5 0 7002 100000 123",
+    )
+    .expect("plain proc stat");
 
     let paths = ClaudePaths::new(&claude_dir).with_proc_root(&proc_root);
     ClaudeFixture {

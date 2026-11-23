@@ -4,9 +4,12 @@ import {
   agentSocketUrl,
   blockedLabel,
   claudeFor,
+  claudeLabel,
   claudeSummary,
+  claudeUiStatus,
   formatTokens,
   uiStatus,
+  unmanagedSessions,
   type AgentInfo,
   type ClaudeAgent,
 } from './agents'
@@ -57,6 +60,7 @@ describe('agents helpers', () => {
 const claude: ClaudeAgent = {
   terminal: 't7',
   sessionId: '0f3c2b1a-aaaa-bbbb-cccc-0123456789ab',
+  cwd: '/home/dev/dandelion',
   name: 'dandelion-a6',
   agent: null,
   version: '2.1.330',
@@ -95,6 +99,27 @@ describe('claude helpers', () => {
     expect(claudeFor([claude], 't9')).toBeNull()
     expect(claudeFor([claude], null)).toBeNull()
     expect(claudeFor(undefined, 't7')).toBeNull()
+  })
+
+  it('lists the sessions outside herdr as unmanaged', () => {
+    const outside: ClaudeAgent = {
+      ...claude,
+      terminal: null,
+      name: null,
+      sessionId: 'abcdefgh-0000-0000-0000-000000000000',
+    }
+
+    expect(unmanagedSessions([claude, outside])).toEqual([outside])
+    expect(unmanagedSessions(undefined)).toEqual([])
+    expect(claudeLabel(outside)).toBe('session abcdefgh')
+    expect(claudeLabel(claude)).toBe('dandelion-a6')
+  })
+
+  it('maps a Claude session state onto the UI states', () => {
+    expect(claudeUiStatus(claude)).toBe('waiting')
+    expect(claudeUiStatus({ ...claude, status: 'busy' })).toBe('working')
+    expect(claudeUiStatus({ ...claude, status: 'idle' })).toBe('idle')
+    expect(claudeUiStatus({ ...claude, status: 'paused-for-coffee' })).toBe('idle')
   })
 
   it('compacts token counts', () => {

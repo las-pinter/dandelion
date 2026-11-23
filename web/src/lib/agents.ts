@@ -39,6 +39,28 @@ export function uiStatus(agent: AgentInfo): UiStatus {
   }
 }
 
+/** Claude Code sessions that no herdr terminal owns; they cannot be controlled. */
+export function unmanagedSessions(sessions: ClaudeAgent[] | undefined): ClaudeAgent[] {
+  return (sessions ?? []).filter((session) => session.terminal == null)
+}
+
+/** A session label: its name, then a short session id. */
+export function claudeLabel(session: ClaudeAgent): string {
+  return session.name ?? `session ${session.sessionId.slice(0, 8)}`
+}
+
+/** Maps a Claude session state onto the five UI states. */
+export function claudeUiStatus(session: ClaudeAgent): UiStatus {
+  switch (session.status) {
+    case 'busy':
+      return 'working'
+    case 'waiting':
+      return 'waiting'
+    default:
+      return 'idle'
+  }
+}
+
 /** The Claude Code session behind a terminal, when the monitor knows one. */
 export function claudeFor(
   sessions: ClaudeAgent[] | undefined,
