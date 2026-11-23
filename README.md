@@ -42,9 +42,15 @@ needs a session.
   Plain HTTP is accepted only for `http://localhost[:port]`: WebAuthn relying
   parties are domain names, so `127.0.0.1` and `[::1]` origins cannot host
   passkeys and are refused at startup.
-- **Tailnet exposure:** `just tailnet-serve` runs `tailscale serve --bg 7443`.
-  Tailscale terminates TLS and proxies to loopback; the app never binds a
-  non-loopback address or changes host networking.
+- **Tailnet exposure:** `just tailnet-serve` runs
+  `sudo tailscale serve --bg 7443`. Writing serve configuration needs root,
+  so a password prompt is expected; alternatively run `just tailnet-operator`
+  once to allow the current user. Tailscale terminates TLS and proxies to
+  loopback; the app never binds a non-loopback address or changes host
+  networking.
+- **Start the server:** `cargo run --release -p dandelion-server -- serve`
+  (or `./target/release/dandelion serve`). It prints the setup link on the
+  first start; keep it running while you register the passkey.
 - **Local development:** run the server with
   `DANDELION_PUBLIC_URL=http://localhost:5173`, then use
   `http://localhost:5173` so the WebAuthn relying party matches the page.
