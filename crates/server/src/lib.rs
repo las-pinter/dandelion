@@ -8,6 +8,7 @@ pub mod audit;
 pub mod auth;
 pub mod config;
 pub mod health;
+pub mod metrics;
 pub mod openapi;
 pub mod shutdown;
 pub mod state;

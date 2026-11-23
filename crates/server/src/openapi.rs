@@ -27,10 +27,17 @@ use crate::auth::routes::{
         crate::auth::routes::me,
         crate::auth::routes::logout,
         crate::auth::routes::logout_all,
+        crate::metrics::routes::latest,
+        crate::metrics::routes::history,
     ),
     components(schemas(
         crate::health::HealthResponse,
         crate::app::ApiError,
+        crate::metrics::LiveSample,
+        dandelion_sysmon::Snapshot,
+        dandelion_sysmon::MetricsPoint,
+        dandelion_sysmon::MinuteAggregate,
+        dandelion_sysmon::HistorySnapshot,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -64,6 +71,16 @@ mod tests {
         let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
 
         assert!(document["paths"]["/api/health"].is_object());
+    }
+
+    #[test]
+    fn document_lists_the_system_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in ["/api/system/latest", "/api/system/history"] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(document["components"]["schemas"]["Snapshot"].is_object());
     }
 
     #[test]

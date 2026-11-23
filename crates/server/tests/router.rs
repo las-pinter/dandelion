@@ -11,6 +11,7 @@ use dandelion_server::{
     app::{build_router, router_for_tests},
     audit::{AuditEntry, AuditLog},
     auth::{Auth, origin::PublicOrigin},
+    metrics::Metrics,
     state::AppState,
     storage,
     ws::hub::Hub,
@@ -23,7 +24,12 @@ async fn test_state() -> AppState {
     let origin = PublicOrigin::parse("https://example.test").expect("test origin");
     let auth = Auth::new(pool.clone(), origin).expect("auth services");
 
-    AppState::new(AuditLog::new(pool), auth, Hub::default())
+    AppState::new(
+        AuditLog::new(pool.clone()),
+        auth,
+        Hub::default(),
+        Metrics::new(pool),
+    )
 }
 
 async fn send(uri: &str) -> Response {

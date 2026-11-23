@@ -225,6 +225,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/system/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stored history for one window. */
+        get: operations["history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The newest full snapshot. */
+        get: operations["latest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -249,6 +283,57 @@ export interface components {
             ceremony_id: string;
             /** @description The `PublicKeyCredentialCreationOptions` or request options. */
             options: Record<string, never>;
+        };
+        /** @description Processor usage and load averages. */
+        Cpu: {
+            /** @description One, five, and fifteen minute load averages. */
+            load: components["schemas"]["LoadAverage"];
+            /** @description Usage of each core in percent, from 0 to 100. */
+            per_core_percent: number[];
+            /**
+             * Format: float
+             * @description Usage across all cores in percent, from 0 to 100.
+             */
+            usage_percent: number;
+        };
+        /** @description A mounted filesystem with its capacity and I/O rates. */
+        DiskMount: {
+            /**
+             * Format: int64
+             * @description Bytes available to unprivileged users.
+             */
+            available_bytes: number;
+            /** @description Device as the kernel reports it in `/proc/mounts`. */
+            device: string;
+            /**
+             * @description Resolved `/proc/diskstats` name of the backing device, used to avoid
+             *     counting one device twice when it is mounted under several paths.
+             */
+            device_name: string;
+            /** @description Filesystem type, for example `ext4`. */
+            filesystem: string;
+            /** @description Directory the filesystem is mounted on. */
+            mount_point: string;
+            /**
+             * Format: int64
+             * @description Read throughput of the backing device in bytes per second.
+             */
+            read_bytes_per_sec: number;
+            /**
+             * Format: int64
+             * @description Filesystem capacity.
+             */
+            total_bytes: number;
+            /**
+             * Format: int64
+             * @description Bytes in use by files.
+             */
+            used_bytes: number;
+            /**
+             * Format: int64
+             * @description Write throughput of the backing device in bytes per second.
+             */
+            write_bytes_per_sec: number;
         };
         /** @description Finishes a passkey login. */
         FinishAuthenticationRequest: {
@@ -275,6 +360,43 @@ export interface components {
             /** @description Cargo package version. */
             version: string;
         };
+        /** @description A serialisable copy of everything a history holds, oldest sample first. */
+        HistorySnapshot: {
+            /** @description Completed minute aggregates. */
+            minutes: components["schemas"]["MinuteAggregate"][];
+            /** @description Second-resolution points. */
+            seconds: components["schemas"]["MetricsPoint"][];
+        };
+        /**
+         * @description One live sample: the full observation and its compact history point.
+         *
+         *     Publishing both keeps the client's live series on the same derivation as
+         *     stored history instead of reimplementing it in TypeScript.
+         */
+        LiveSample: {
+            /** @description The compact point derived from it. */
+            point: components["schemas"]["MetricsPoint"];
+            /** @description The full observation. */
+            snapshot: components["schemas"]["Snapshot"];
+        };
+        /** @description The kernel's one, five, and fifteen minute load averages. */
+        LoadAverage: {
+            /**
+             * Format: float
+             * @description Fifteen minute load average.
+             */
+            fifteen: number;
+            /**
+             * Format: float
+             * @description Five minute load average.
+             */
+            five: number;
+            /**
+             * Format: float
+             * @description One minute load average.
+             */
+            one: number;
+        };
         /** @description Password login. */
         LoginPasswordRequest: {
             /** @description The candidate password. */
@@ -286,6 +408,150 @@ export interface components {
             display_name: string;
             /** @description Login name. */
             username: string;
+        };
+        /** @description Physical and swap memory in bytes. */
+        Memory: {
+            /**
+             * Format: int64
+             * @description Memory the kernel expects to be reclaimable for new work.
+             */
+            available_bytes: number;
+            /**
+             * Format: int64
+             * @description Page cache and reclaimable slab, minus shared memory.
+             */
+            cache_bytes: number;
+            /**
+             * Format: int64
+             * @description Total swap space.
+             */
+            swap_total_bytes: number;
+            /**
+             * Format: int64
+             * @description Swap space in use.
+             */
+            swap_used_bytes: number;
+            /**
+             * Format: int64
+             * @description Total physical memory.
+             */
+            total_bytes: number;
+            /**
+             * Format: int64
+             * @description Memory in use, derived as total minus available.
+             */
+            used_bytes: number;
+        };
+        /** @description One compact metrics sample at a single point in time. */
+        MetricsPoint: {
+            /**
+             * Format: float
+             * @description Total CPU usage in percent.
+             */
+            cpu_percent: number;
+            /**
+             * Format: float
+             * @description One minute load average.
+             */
+            load1: number;
+            /**
+             * Format: int64
+             * @description Total physical memory, in bytes.
+             */
+            memory_total_bytes: number;
+            /**
+             * Format: int64
+             * @description Physical memory in use, in bytes.
+             */
+            memory_used_bytes: number;
+            /**
+             * Format: int64
+             * @description Disk read rate summed over all mounted devices.
+             */
+            read_bytes_per_sec: number;
+            /**
+             * Format: int64
+             * @description Network receive rate summed over all interfaces.
+             */
+            rx_bytes_per_sec: number;
+            /**
+             * Format: int64
+             * @description Unix time in milliseconds.
+             */
+            timestamp_ms: number;
+            /**
+             * Format: int64
+             * @description Network transmit rate summed over all interfaces.
+             */
+            tx_bytes_per_sec: number;
+            /**
+             * Format: int64
+             * @description Disk write rate summed over all mounted devices.
+             */
+            write_bytes_per_sec: number;
+        };
+        /** @description One minute of samples reduced to averages and maxima. */
+        MinuteAggregate: {
+            /** @description CPU usage in percent. */
+            cpu_percent: components["schemas"]["Stat"];
+            /** @description One minute load average. */
+            load1: components["schemas"]["Stat"];
+            /** @description Physical memory in use, in bytes. */
+            memory_used_bytes: components["schemas"]["Stat"];
+            /**
+             * Format: int64
+             * @description Unix time of the minute's first millisecond, in milliseconds.
+             */
+            minute_start_ms: number;
+            /** @description Disk read rate in bytes per second. */
+            read_bytes_per_sec: components["schemas"]["Stat"];
+            /** @description Network receive rate in bytes per second. */
+            rx_bytes_per_sec: components["schemas"]["Stat"];
+            /**
+             * Format: int32
+             * @description Number of second samples that went into this aggregate.
+             */
+            sample_count: number;
+            /** @description Network transmit rate in bytes per second. */
+            tx_bytes_per_sec: components["schemas"]["Stat"];
+            /** @description Disk write rate in bytes per second. */
+            write_bytes_per_sec: components["schemas"]["Stat"];
+        };
+        /** @description A network interface with its traffic rates. */
+        NetworkInterface: {
+            /** @description Interface name, for example `eth0`. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Received bytes per second.
+             */
+            rx_bytes_per_sec: number;
+            /**
+             * Format: int64
+             * @description Transmitted bytes per second.
+             */
+            tx_bytes_per_sec: number;
+        };
+        /** @description A process and its resource usage at sample time. */
+        Process: {
+            /**
+             * Format: float
+             * @description CPU usage in percent of one core; it can exceed 100 for multi-threaded
+             *     processes.
+             */
+            cpu_percent: number;
+            /**
+             * Format: int64
+             * @description Resident memory in bytes.
+             */
+            memory_bytes: number;
+            /** @description Command name, truncated by the kernel to 15 characters. */
+            name: string;
+            /**
+             * Format: int32
+             * @description Process identifier.
+             */
+            pid: number;
         };
         /** @description A successful session start. */
         SessionResponse: {
@@ -312,6 +578,58 @@ export interface components {
         SetupTokenRequest: {
             /** @description The single-use setup token. */
             token: string;
+        };
+        /** @description One complete observation of the machine. */
+        Snapshot: {
+            /** @description Processor usage and load. */
+            cpu: components["schemas"]["Cpu"];
+            /** @description Mounted filesystems with their usage and I/O rates. */
+            disks: components["schemas"]["DiskMount"][];
+            /** @description Physical and swap memory. */
+            memory: components["schemas"]["Memory"];
+            /** @description Network interfaces with their traffic rates. */
+            network: components["schemas"]["NetworkInterface"][];
+            /** @description Temperature sensors that are available on the host. */
+            temperatures: components["schemas"]["Temperature"][];
+            /**
+             * Format: int64
+             * @description Unix time of the sample in milliseconds.
+             */
+            timestamp_ms: number;
+            /** @description The busiest processes, sorted by CPU usage, highest first. */
+            top_processes_by_cpu: components["schemas"]["Process"][];
+            /** @description The largest processes, sorted by resident memory, highest first. */
+            top_processes_by_memory: components["schemas"]["Process"][];
+            /**
+             * Format: double
+             * @description Seconds since boot.
+             */
+            uptime_secs: number;
+        };
+        /** @description Average and maximum of one metric within a minute. */
+        Stat: {
+            /**
+             * Format: double
+             * @description Arithmetic mean over the samples in the minute.
+             */
+            avg: number;
+            /**
+             * Format: double
+             * @description Largest sample in the minute.
+             */
+            max: number;
+        };
+        /** @description A reading from a temperature sensor. */
+        Temperature: {
+            /**
+             * Format: float
+             * @description Temperature in degrees Celsius.
+             */
+            celsius: number;
+            /** @description Sensor chip name, for example `coretemp`. */
+            chip: string;
+            /** @description Sensor label within the chip. */
+            label: string;
         };
         /** @description Setup token in or out of a query string. */
         TokenQuery: {
@@ -698,6 +1016,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    history: {
+        parameters: {
+            query?: {
+                /** @description Window to return: `1h` for second points, `7d` for minute aggregates. */
+                range?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stored points for the window */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistorySnapshot"];
+                };
+            };
+            /** @description Unknown range */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Storage failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    latest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The newest sample */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Snapshot"];
+                };
+            };
+            /** @description No sample yet */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };

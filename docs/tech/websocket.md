@@ -52,6 +52,18 @@ All messages are JSON text frames. The server rejects frames larger than
 carries only topics this connection has subscribed to; `data` is opaque to the
 transport.
 
+## Topics
+
+| Topic | Payload | Cadence |
+|---|---|---|
+| `system.metrics` | `LiveSample`: `{ snapshot, point }` — the full `Snapshot` plus the compact `MetricsPoint` the server also stores | One per second while the collector runs |
+
+Stored history is read over REST: `GET /api/system/history?range=1h` returns
+second points, `?range=7d` returns minute aggregates, and
+`GET /api/system/latest` returns the newest snapshot (`503` until the first
+sample). SQLite keeps one hour of seconds and one week of minutes; a restart
+loses only the minute that was open in memory.
+
 ## Backpressure and limits
 
 - Each topic has its own bounded broadcast channel (256 events). Publishers
