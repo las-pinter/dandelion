@@ -1,6 +1,9 @@
 //! Entry point of the `dandelion` binary.
 
-use std::{net::SocketAddr, path::PathBuf};
+use std::{
+    net::SocketAddr,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -16,10 +19,12 @@ use dandelion_server::{
         token::{hash_token, random_token},
     },
     config::{self, BindAddr},
+    metrics::{self, Metrics},
     openapi::ApiDoc,
     shutdown,
     state::AppState,
     storage,
+    ws::hub::Hub,
 };
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
@@ -54,6 +59,12 @@ enum Command {
     },
     /// Print the `OpenAPI` document as JSON.
     Openapi,
+    /// Write the WebSocket TypeScript bindings.
+    TsTypes {
+        /// Directory for the generated `.ts` files.
+        #[arg(default_value = "web/src/api/gen/ws")]
+        out_dir: PathBuf,
+    },
     /// Verify that the embedded web application is present.
     Assets,
 }
@@ -78,6 +89,7 @@ async fn main() -> Result<()> {
         Some(Command::Serve { bind, data_dir }) => run_server(bind, data_dir).await,
         Some(Command::Auth { command }) => run_auth(command).await,
         Some(Command::Openapi) => print_openapi(),
+        Some(Command::TsTypes { out_dir }) => export_ts_types(&out_dir),
         Some(Command::Assets) => check_assets(),
     }
 }
@@ -90,6 +102,19 @@ fn init_tracing() {
 fn print_openapi() -> Result<()> {
     let document = ApiDoc::openapi();
     println!("{}", serde_json::to_string_pretty(&document)?);
+    Ok(())
+}
+
+fn export_ts_types(out_dir: &Path) -> Result<()> {
+    use dandelion_server::ws::protocol::{ClientMessage, ServerMessage};
+    use ts_rs::TS;
+
+    std::fs::create_dir_all(out_dir)
+        .with_context(|| format!("create the bindings directory {}", out_dir.display()))?;
+    let config = ts_rs::Config::new().with_out_dir(out_dir);
+    ClientMessage::export_all(&config).context("export ClientMessage")?;
+    ServerMessage::export_all(&config).context("export ServerMessage")?;
+    println!("websocket bindings written to {}", out_dir.display());
     Ok(())
 }
 
@@ -110,7 +135,8 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     tracing::info!(origin = %origin.as_str(), "public origin");
 
     let auth = Auth::new(pool.clone(), origin).context("configure authentication")?;
-    let audit = AuditLog::new(pool);
+    let audit = AuditLog::new(pool.clone());
+    let metrics = Metrics::new(pool);
 
     if !auth.setup_complete().await.context("read setup state")? {
         let token = auth
@@ -132,7 +158,9 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         );
     }
 
-    serve(bind, AppState::new(audit, auth)).await
+    let state = AppState::new(audit, auth, Hub::default(), metrics);
+    metrics::collector::spawn(state.clone());
+    serve(bind, state).await
 }
 
 async fn run_auth(command: AuthCommand) -> Result<()> {

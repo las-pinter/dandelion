@@ -1,20 +1,29 @@
 //! State shared by HTTP handlers.
 
-use crate::{audit::AuditLog, auth::Auth};
+use crate::{audit::AuditLog, auth::Auth, metrics::Metrics, ws::hub::Hub};
 
-/// Handlers share the audit log and the authentication services.
+/// Handlers share the audit log, authentication, the hub, and live metrics.
 #[derive(Debug, Clone)]
 pub struct AppState {
     /// Append-only log for control actions.
     pub audit: AuditLog,
     /// Sessions, passkeys, setup, and origin checks.
     pub auth: Auth,
+    /// Fan-out point for live WebSocket events.
+    pub hub: Hub,
+    /// System metrics, persistence, and the latest snapshot.
+    pub metrics: Metrics,
 }
 
 impl AppState {
     /// Builds the shared state.
     #[must_use]
-    pub const fn new(audit: AuditLog, auth: Auth) -> Self {
-        Self { audit, auth }
+    pub const fn new(audit: AuditLog, auth: Auth, hub: Hub, metrics: Metrics) -> Self {
+        Self {
+            audit,
+            auth,
+            hub,
+            metrics,
+        }
     }
 }

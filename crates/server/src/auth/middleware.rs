@@ -4,7 +4,7 @@ use axum::{
     Json,
     extract::{Request, State},
     http::{
-        HeaderValue, Method, StatusCode,
+        HeaderMap, HeaderValue, Method, StatusCode,
         header::{CACHE_CONTROL, COOKIE, ORIGIN, SET_COOKIE},
     },
     middleware::Next,
@@ -113,9 +113,16 @@ pub async fn check_origin(State(state): State<AppState>, request: Request, next:
 }
 
 fn request_allowed(state: &AppState, request: &Request) -> bool {
-    let headers = request.headers();
+    origin_allowed(state.auth.origin(), request.headers())
+}
+
+/// Whether a request's origin metadata matches the public origin.
+///
+/// Shared by the mutating-request guard and the WebSocket handshake.
+#[must_use]
+pub fn origin_allowed(origin: &crate::auth::origin::PublicOrigin, headers: &HeaderMap) -> bool {
     match headers.get(ORIGIN).and_then(|value| value.to_str().ok()) {
-        Some(origin) => state.auth.origin().accepts_origin(origin),
+        Some(origin_header) => origin.accepts_origin(origin_header),
         None => {
             headers
                 .get("sec-fetch-site")

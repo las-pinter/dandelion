@@ -56,13 +56,17 @@ typecheck:
 # dlx runs the generator with its own TypeScript 5; the app builds with TypeScript 7,
 # which no longer ships the compiler API the generator needs.
 gen:
-    mkdir -p target
+    mkdir -p target web/src/api/gen
     cargo run --quiet --locked -p dandelion-server -- openapi > target/openapi.json
     pnpm dlx openapi-typescript@7.13.0 target/openapi.json -o web/src/api/gen/schema.d.ts
+    cargo run --quiet --locked -p dandelion-server -- ts-types web/src/api/gen/ws
 
-# Fail when the generated client is stale.
-gen-check: gen
-    @git diff --exit-code -- web/src/api/gen/schema.d.ts
+# Fail when generated files are stale, missing, orphaned, or untracked.
+# Regenerating from an empty directory makes removed types leave no orphans.
+gen-check:
+    rm -rf web/src/api/gen
+    just gen
+    @test -z "$(git status --porcelain -- web/src/api/gen)"
 
 # Run all tests.
 test:

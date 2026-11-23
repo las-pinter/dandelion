@@ -12,7 +12,7 @@ pre-commit:
     web-lint:
       root: "web/"
       glob: "*.{ts,tsx}"
-      run: pnpm exec oxlint --deny-warnings {staged_files}
+      run: pnpm exec oxlint --deny-warnings --no-error-on-unmatched-pattern {staged_files}
 
 commit-msg:
   commands:
