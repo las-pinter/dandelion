@@ -10,7 +10,8 @@ export default defineConfig({
   },
   server: {
     // The Rust server serves the API; the dev server proxies to it.
-    // Plain HTTP until TLS lands with auth.
+    // Run the server with DANDELION_PUBLIC_URL=http://localhost:5173 so the
+    // WebAuthn relying party matches the page, and use http://localhost:5173.
     proxy: { '/api': { target: 'http://127.0.0.1:7443', ws: true } },
   },
   test: {

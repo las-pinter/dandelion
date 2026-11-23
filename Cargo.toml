@@ -11,6 +11,7 @@ publish = false
 
 [workspace.dependencies]
 anyhow = "1.0.104"
+argon2 = "0.6.0"
 async-trait = "0.1.92"
 axum = "0.8.9"
 base64 = "0.23.1"
@@ -18,6 +19,7 @@ bollard = "0.21.1"
 clap = { version = "4.6.9", features = ["derive"] }
 dandelion-core = { path = "crates/core" }
 futures-util = "0.3.34"
+getrandom = "0.4.3"
 http-body-util = "0.1.5"
 mime_guess = "2.0.5"
 notify = "8.2.0"
@@ -25,6 +27,7 @@ rust-embed = "8.14.0"
 rustix = { version = "1.1.6", features = ["fs", "param", "process"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+sha2 = "0.11.1"
 sqlx = { version = "0.9.1", default-features = false, features = ["macros", "migrate", "runtime-tokio", "sqlite"] }
 tempfile = "3.27.0"
 thiserror = "2.0.21"
@@ -32,7 +35,10 @@ tokio = { version = "1.54.1", features = ["fs", "io-util", "macros", "net", "pro
 tower = "0.5.3"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+url = "2.5.9"
 utoipa = { version = "6.0.0", features = ["macros"] }
+uuid = { version = "1.29.3", features = ["v4", "serde"] }
+webauthn-rs = { version = "0.6.2", default-features = false }
 zbus = { version = "6.5.0", features = ["tokio"] }
 
 [workspace.lints.rust]

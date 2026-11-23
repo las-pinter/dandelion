@@ -5,6 +5,14 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+  # RUSTSEC-2023-0071 (rsa, Marvin timing attack) is about private-key
+  # operations. webauthn-rs-core imports only RS256PublicKey / RS256VerifyingKey
+  # to check WebAuthn signatures; this process never holds an RSA private key.
+  # The resolved 0.10.0-rc.19 already contains the constant-time rewrite, but
+  # the advisory clears only a stable 0.10.0. Revisit when webauthn-rs updates.
+  "RUSTSEC-2023-0071",
+]
 
 [licenses]
 version = 2

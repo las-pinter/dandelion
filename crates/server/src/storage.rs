@@ -67,6 +67,7 @@ pub async fn open(path: &Path) -> Result<SqlitePool, StorageError> {
         .filename(path)
         .create_if_missing(true)
         .journal_mode(SqliteJournalMode::Wal)
+        .foreign_keys(true)
         .busy_timeout(Duration::from_secs(5));
     let pool = SqlitePoolOptions::new()
         .max_connections(5)

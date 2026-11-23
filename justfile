@@ -18,6 +18,11 @@ setup:
 dev-web:
     {{web}} dev
 
+# Expose loopback Dandelion on the tailnet through Tailscale's HTTPS proxy.
+# The operator owns this command; Dandelion never changes host networking.
+tailnet-serve:
+    tailscale serve --bg 7443
+
 # Browse and build components in isolation.
 storybook:
     {{web}} storybook
