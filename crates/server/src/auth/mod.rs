@@ -17,6 +17,7 @@ pub mod token;
 
 use sqlx::SqlitePool;
 use thiserror::Error;
+use tokio::sync::broadcast;
 use webauthn_rs::prelude::{Webauthn, WebauthnBuilder};
 
 use self::{
@@ -30,6 +31,18 @@ use self::{
 
 /// Setup links expire after fifteen minutes.
 pub const SETUP_TOKEN_TTL_MS: i64 = 15 * 60 * 1000;
+
+/// Buffered revocation signals before a lagging socket is closed.
+const REVOCATION_CAPACITY: usize = 64;
+
+/// A signal that live WebSocket sessions must be closed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Revocation {
+    /// One session, identified by its token hash.
+    Session(String),
+    /// Every session of one user.
+    User(String),
+}
 
 /// Authentication failures.
 #[derive(Debug, Error)]
@@ -56,6 +69,7 @@ pub struct Auth {
     webauthn: Webauthn,
     ceremonies: CeremonyStore,
     limiter: RateLimiter,
+    revocations: broadcast::Sender<Revocation>,
 }
 
 impl Auth {
@@ -65,12 +79,14 @@ impl Auth {
             .and_then(|builder| builder.rp_name("Dandelion").build())
             .map_err(|error| AuthError::Webauthn(error.to_string()))?;
         let store = AuthStore::new(pool);
+        let (revocations, _) = broadcast::channel(REVOCATION_CAPACITY);
         Ok(Self {
             limiter: RateLimiter::new(store.clone()),
             store,
             origin,
             webauthn,
             ceremonies: CeremonyStore::new(),
+            revocations,
         })
     }
 
@@ -102,6 +118,24 @@ impl Auth {
     #[must_use]
     pub fn limiter(&self) -> &RateLimiter {
         &self.limiter
+    }
+
+    /// Tells live sockets that one session was revoked.
+    pub fn revoke_session(&self, token_hash: &str) {
+        let _ = self
+            .revocations
+            .send(Revocation::Session(token_hash.to_owned()));
+    }
+
+    /// Tells live sockets that every session of one user was revoked.
+    pub fn revoke_user(&self, user_id: &str) {
+        let _ = self.revocations.send(Revocation::User(user_id.to_owned()));
+    }
+
+    /// A receiver for revocation signals; sockets close promptly on them.
+    #[must_use]
+    pub fn subscribe_revocations(&self) -> broadcast::Receiver<Revocation> {
+        self.revocations.subscribe()
     }
 
     /// Whether the owner has both a password and at least one passkey.
@@ -165,6 +199,14 @@ impl Auth {
         Ok(Some(session))
     }
 
+    /// Whether a session row still exists and has not expired.
+    pub async fn session_live(&self, token_hash: &str, now: i64) -> Result<bool, StoreError> {
+        let Some(session) = self.store.session(token_hash).await? else {
+            return Ok(false);
+        };
+        Ok(session.expires_at > now)
+    }
+
     /// Slides a session at most once an hour; true when the cookie must be
     /// refreshed.
     pub async fn touch_session(
@@ -186,7 +228,7 @@ impl Auth {
 mod tests {
     use uuid::Uuid;
 
-    use super::{Auth, SETUP_TOKEN_TTL_MS};
+    use super::{Auth, Revocation, SETUP_TOKEN_TTL_MS};
     use crate::{
         auth::{origin::PublicOrigin, token::hash_token},
         storage::open_in_memory,
@@ -274,6 +316,39 @@ mod tests {
         let origin = PublicOrigin::parse("http://localhost:5173").expect("origin");
 
         assert!(Auth::new(pool, origin).is_ok());
+    }
+
+    #[tokio::test]
+    async fn session_liveness_tracks_deletion_and_expiry() {
+        let auth = auth().await;
+        let owner = auth.store().ensure_owner(1).await.expect("owner");
+        let token_hash = hash_token("live");
+        auth.store()
+            .insert_session(&token_hash, &owner.id, 1, 100)
+            .await
+            .expect("session");
+
+        assert!(auth.session_live(&token_hash, 50).await.expect("check"));
+        assert!(!auth.session_live(&token_hash, 100).await.expect("expired"));
+
+        auth.store()
+            .delete_session(&token_hash)
+            .await
+            .expect("delete");
+        assert!(!auth.session_live(&token_hash, 50).await.expect("deleted"));
+    }
+
+    #[tokio::test]
+    async fn revocation_signals_reach_subscribers() {
+        let auth = auth().await;
+        let mut receiver = auth.subscribe_revocations();
+
+        auth.revoke_session("token-hash");
+
+        assert_eq!(
+            receiver.recv().await.expect("revocation signal"),
+            Revocation::Session("token-hash".to_owned())
+        );
     }
 
     #[tokio::test]

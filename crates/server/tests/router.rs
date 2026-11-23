@@ -13,6 +13,7 @@ use dandelion_server::{
     auth::{Auth, origin::PublicOrigin},
     state::AppState,
     storage,
+    ws::hub::Hub,
 };
 use http_body_util::BodyExt;
 use tower::ServiceExt;
@@ -22,7 +23,7 @@ async fn test_state() -> AppState {
     let origin = PublicOrigin::parse("https://example.test").expect("test origin");
     let auth = Auth::new(pool.clone(), origin).expect("auth services");
 
-    AppState::new(AuditLog::new(pool), auth)
+    AppState::new(AuditLog::new(pool), auth, Hub::default())
 }
 
 async fn send(uri: &str) -> Response {

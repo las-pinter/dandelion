@@ -11,6 +11,7 @@ use dandelion_server::{
     auth::{Auth, origin::PublicOrigin, password, session::now_millis, token::hash_token},
     state::AppState,
     storage,
+    ws::hub::Hub,
 };
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -24,7 +25,7 @@ async fn test_state() -> AppState {
     let origin = PublicOrigin::parse(ORIGIN).expect("test origin");
     let auth = Auth::new(pool.clone(), origin).expect("auth services");
 
-    AppState::new(AuditLog::new(pool), auth)
+    AppState::new(AuditLog::new(pool), auth, Hub::default())
 }
 
 async fn send(

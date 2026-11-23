@@ -76,6 +76,7 @@ pub async fn logout(
         .delete_session(&user.token_hash)
         .await
         .map_err(internal)?;
+    state.auth.revoke_session(&user.token_hash);
     audit(&state, "owner", "auth.logout", "session", None).await;
 
     Ok(with_cleared_cookie(&state))
@@ -93,6 +94,7 @@ pub async fn logout_all(
         .delete_sessions(&user.user_id)
         .await
         .map_err(internal)?;
+    state.auth.revoke_user(&user.user_id);
     audit(&state, "owner", "auth.logout.all", "owner", None).await;
 
     Ok(with_cleared_cookie(&state))
