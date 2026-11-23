@@ -14,11 +14,12 @@ lists every recipe. `gen-check` regenerates the API client from an empty
 directory and fails on any working-tree change, so commit the generated files
 before running the gate.
 
-## Parallel work
+## Branching
 
-- One task, one branch, one git worktree: `git worktree add ../dandelion-<slug> -b <type>/<slug>`.
+- Most work is sequential on the long-lived `dev` branch; commit there.
+- When a feature is done, open a PR from `dev` to `main`. `main` stays green: CI's `gate` must pass and the PR is squash-merged. After the merge, fast-forward `dev` onto `main` (`git fetch origin && git reset --hard origin/main`).
+- Parallel work gets its own branch and worktree: `git worktree add ../dandelion-<slug> -b <type>/<slug>`; merge it into `dev` when done.
 - Commits follow Conventional Commits (`feat(agents): …`); the commit-msg hook enforces it. Scopes are crate or page names.
-- `main` is always green. Changes land as PRs, squash-merged after CI.
 - The layout below removes shared hotspot files. Keep it that way: when a change needs a central list, add a registration seam instead.
 
 ## Layout
