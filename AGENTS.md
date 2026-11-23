@@ -10,7 +10,9 @@ spawning, or sudo is **security-sensitive** and says so in its PR.
 
 `just ci` is the gate: format check, typecheck, lint, tests, build. CI runs
 exactly the same recipe. Run `just setup` once per clone or worktree. `just`
-lists every recipe.
+lists every recipe. `gen-check` regenerates the API client from an empty
+directory and fails on any working-tree change, so commit the generated files
+before running the gate.
 
 ## Parallel work
 
