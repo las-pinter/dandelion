@@ -2,10 +2,13 @@
 
 use std::sync::Arc;
 
-use crate::{audit::AuditLog, auth::Auth, metrics::Metrics, services::Services, ws::hub::Hub};
+use crate::{
+    audit::AuditLog, auth::Auth, containers::Containers, metrics::Metrics, services::Services,
+    ws::hub::Hub,
+};
 
-/// Handlers share the audit log, authentication, the hub, live metrics, and
-/// systemd access.
+/// Handlers share the audit log, authentication, the hub, live metrics,
+/// systemd access, and Docker access.
 #[derive(Debug, Clone)]
 pub struct AppState {
     /// Append-only log for control actions.
@@ -18,6 +21,8 @@ pub struct AppState {
     pub metrics: Metrics,
     /// systemd access and the root-action allowlist.
     pub services: Arc<Services>,
+    /// Docker access; actions are disabled when the socket is missing.
+    pub containers: Containers,
 }
 
 impl AppState {
@@ -29,6 +34,7 @@ impl AppState {
         hub: Hub,
         metrics: Metrics,
         services: Services,
+        containers: Containers,
     ) -> Self {
         Self {
             audit,
@@ -36,6 +42,7 @@ impl AppState {
             hub,
             metrics,
             services: Arc::new(services),
+            containers,
         }
     }
 }

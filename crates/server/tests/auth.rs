@@ -9,6 +9,7 @@ use dandelion_server::{
     app::build_router,
     audit::AuditLog,
     auth::{Auth, origin::PublicOrigin, password, session::now_millis, token::hash_token},
+    containers::Containers,
     metrics::Metrics,
     services::Services,
     state::AppState,
@@ -33,6 +34,7 @@ async fn test_state() -> AppState {
         Hub::default(),
         Metrics::new(pool),
         Services::disabled(),
+        Containers::disabled(),
     )
 }
 

@@ -35,6 +35,9 @@ use crate::auth::routes::{
         crate::services::snapshot,
         crate::services::action,
         crate::services::journal,
+        crate::containers::snapshot,
+        crate::containers::action,
+        crate::containers::logs,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -58,6 +61,14 @@ use crate::auth::routes::{
         dandelion_system::systemd::ActionMechanism,
         dandelion_system::systemd::AllowRule,
         dandelion_system::systemd::JournalEntry,
+        crate::containers::ContainersSnapshot,
+        crate::containers::ContainerAction,
+        crate::containers::ContainerActionRequest,
+        dandelion_system::docker::ContainerInfo,
+        dandelion_system::docker::ContainerState,
+        dandelion_system::docker::ContainerLogLine,
+        dandelion_system::docker::LogStream,
+        dandelion_system::docker::DockerAvailability,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -135,6 +146,43 @@ mod tests {
             document["components"]["schemas"]["ServicesSnapshot"].is_object(),
             "missing ServicesSnapshot"
         );
+    }
+
+    #[test]
+    fn document_lists_the_container_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in [
+            "/api/containers",
+            "/api/containers/action",
+            "/api/containers/{container}/logs",
+        ] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["ContainersSnapshot"].is_object(),
+            "missing ContainersSnapshot"
+        );
+    }
+
+    #[test]
+    fn operation_ids_are_unique() {
+        // The generated TypeScript client keys `operations` by operation id, so
+        // two handlers that share a function name would silently swap their
+        // request and response types.
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+        let mut seen = std::collections::BTreeMap::new();
+        for (path, item) in document["paths"].as_object().expect("paths") {
+            for (method, operation) in item.as_object().expect("path item") {
+                let Some(id) = operation["operationId"].as_str() else {
+                    continue;
+                };
+                if let Some(other) = seen.insert(id.to_owned(), format!("{method} {path}")) {
+                    panic!("operation id `{id}` is reused by {other}");
+                }
+            }
+        }
+        assert!(!seen.is_empty(), "the document lists operations");
     }
 
     #[test]

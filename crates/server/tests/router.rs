@@ -11,6 +11,7 @@ use dandelion_server::{
     app::{build_router, router_for_tests},
     audit::{AuditEntry, AuditLog},
     auth::{Auth, origin::PublicOrigin},
+    containers::Containers,
     metrics::Metrics,
     services::Services,
     state::AppState,
@@ -31,6 +32,7 @@ async fn test_state() -> AppState {
         Hub::default(),
         Metrics::new(pool),
         Services::disabled(),
+        Containers::disabled(),
     )
 }
 

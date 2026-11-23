@@ -19,6 +19,7 @@ use dandelion_server::{
         token::{hash_token, random_token},
     },
     config::{self, BindAddr},
+    containers::Containers,
     metrics::{self, Metrics},
     openapi::ApiDoc,
     services::{self, Services},
@@ -178,8 +179,9 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         "sudo allowlist"
     );
     let services = Services::connect(allowlist).await;
+    let containers = Containers::connect();
 
-    let state = AppState::new(audit, auth, Hub::default(), metrics, services);
+    let state = AppState::new(audit, auth, Hub::default(), metrics, services, containers);
     metrics::collector::spawn(state.clone());
     serve(bind, state).await
 }

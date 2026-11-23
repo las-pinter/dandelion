@@ -5,7 +5,8 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::{
-    auth, health, metrics, openapi, processes, services, state::AppState, static_files, ws,
+    auth, containers, health, metrics, openapi, processes, services, state::AppState, static_files,
+    ws,
 };
 
 /// Error body returned by API routes.
@@ -74,6 +75,7 @@ fn protected_routes() -> Router<AppState> {
         .nest("/system", metrics::routes::router())
         .nest("/processes", processes::router())
         .nest("/services", services::router())
+        .nest("/containers", containers::router())
         .route("/ws", get(ws::handler))
 }
 

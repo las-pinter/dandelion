@@ -208,6 +208,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/containers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every container the daemon lists, with its availability. */
+        get: operations["containers_snapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/containers/action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Starts, stops, or restarts one container. */
+        post: operations["containers_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/containers/{container}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads one container's newest log lines. */
+        get: operations["containers_logs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -398,6 +449,66 @@ export interface components {
             /** @description The `PublicKeyCredentialCreationOptions` or request options. */
             options: Record<string, never>;
         };
+        /**
+         * @description One container action.
+         * @enum {string}
+         */
+        ContainerAction: "start" | "stop" | "restart";
+        /** @description A request to start, stop, or restart one container. */
+        ContainerActionRequest: {
+            /** @description What to do with the container. */
+            action: components["schemas"]["ContainerAction"];
+            /** @description Container name or id, as listed by `GET /api/containers`. */
+            container: string;
+            /**
+             * Format: int32
+             * @description Seconds to wait before killing the container; stop and restart only.
+             */
+            timeout_secs?: number | null;
+        };
+        /** @description A container as listed by the daemon. */
+        ContainerInfo: {
+            /** @description Command the container runs, when reported. */
+            command?: string | null;
+            /**
+             * Format: int64
+             * @description Creation time as a Unix timestamp in seconds.
+             */
+            created_at_unix?: number | null;
+            /** @description Container id. */
+            id: string;
+            /** @description Image reference used to create the container. */
+            image: string;
+            /** @description Container labels. */
+            labels: {
+                [key: string]: string;
+            };
+            /** @description Primary name, without Docker's leading slash. */
+            name: string;
+            /** @description Runtime state. */
+            state: components["schemas"]["ContainerState"];
+            /** @description Human-readable status line, such as `Up 3 hours`. */
+            status: string;
+        };
+        /** @description One log line from a container. */
+        ContainerLogLine: {
+            /** @description The line, with invalid UTF-8 replaced. */
+            message: string;
+            /** @description The stream the line came from. */
+            stream: components["schemas"]["LogStream"];
+        };
+        /**
+         * @description Runtime state of a container.
+         * @enum {string}
+         */
+        ContainerState: "created" | "running" | "paused" | "restarting" | "exited" | "removing" | "dead" | "stopping" | "unknown";
+        /** @description What the containers page needs in one response. */
+        ContainersSnapshot: {
+            /** @description Whether the daemon answered, and why not when it did not. */
+            availability: components["schemas"]["DockerAvailability"];
+            /** @description Every container the daemon lists, sorted by name. */
+            containers: components["schemas"]["ContainerInfo"][];
+        };
         /** @description Processor usage and load averages. */
         Cpu: {
             /** @description One, five, and fifteen minute load averages. */
@@ -448,6 +559,15 @@ export interface components {
              * @description Write throughput of the backing device in bytes per second.
              */
             write_bytes_per_sec: number;
+        };
+        /** @description Whether the Docker daemon can be reached. */
+        DockerAvailability: {
+            /** @description True when a daemon answered. */
+            available: boolean;
+            /** @description Why the daemon is unreachable, when it is not. */
+            reason?: string | null;
+            /** @description Daemon version, when it answered. */
+            server_version?: string | null;
         };
         /** @description Finishes a passkey login. */
         FinishAuthenticationRequest: {
@@ -535,6 +655,11 @@ export interface components {
              */
             one: number;
         };
+        /**
+         * @description Which output stream a log line came from.
+         * @enum {string}
+         */
+        LogStream: "stdout" | "stderr" | "stdin" | "console";
         /** @description Password login. */
         LoginPasswordRequest: {
             /** @description The candidate password. */
@@ -1261,6 +1386,146 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthStatus"];
+                };
+            };
+        };
+    };
+    containers_snapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Containers and daemon availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainersSnapshot"];
+                };
+            };
+            /** @description Docker answered with an error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker became unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    containers_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContainerActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The action ran */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The container reference or timeout is not valid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker answered with an error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    containers_logs: {
+        parameters: {
+            query?: {
+                /** @description Number of newest lines to return (default 200, maximum 1000). */
+                tail?: number;
+            };
+            header?: never;
+            path: {
+                /** @description container name or id */
+                container: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Log lines, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerLogLine"][];
+                };
+            };
+            /** @description The container reference is not valid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker answered with an error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };

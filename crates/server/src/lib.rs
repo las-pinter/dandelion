@@ -7,6 +7,7 @@ pub mod app;
 pub mod audit;
 pub mod auth;
 pub mod config;
+pub mod containers;
 pub mod health;
 pub mod metrics;
 pub mod openapi;
