@@ -4,7 +4,7 @@ use axum::{Json, Router, http::StatusCode, middleware, routing::get};
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::{auth, health, openapi, state::AppState, static_files, ws};
+use crate::{auth, health, metrics, openapi, state::AppState, static_files, ws};
 
 /// Error body returned by API routes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
@@ -69,6 +69,7 @@ fn public_routes() -> Router<AppState> {
 fn protected_routes() -> Router<AppState> {
     Router::new()
         .nest("/auth", auth::routes::protected())
+        .nest("/system", metrics::routes::router())
         .route("/ws", get(ws::handler))
 }
 

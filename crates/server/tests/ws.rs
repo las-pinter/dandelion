@@ -22,6 +22,7 @@ use dandelion_server::{
         session::now_millis,
         token::{hash_token, random_token},
     },
+    metrics::Metrics,
     state::AppState,
     storage,
     ws::{
@@ -48,7 +49,7 @@ async fn test_state(hub: Hub) -> AppState {
     let origin = PublicOrigin::parse(ORIGIN).expect("test origin");
     let auth = Auth::new(pool.clone(), origin).expect("auth services");
 
-    AppState::new(AuditLog::new(pool), auth, hub)
+    AppState::new(AuditLog::new(pool.clone()), auth, hub, Metrics::new(pool))
 }
 
 async fn session_cookie(state: &AppState) -> String {

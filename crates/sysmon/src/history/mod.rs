@@ -132,6 +132,12 @@ impl History {
         self.minutes.len()
     }
 
+    /// The newest completed minute aggregate, if one has rolled over.
+    #[must_use]
+    pub fn latest_minute(&self) -> Option<&MinuteAggregate> {
+        self.minutes.back()
+    }
+
     /// Copies the whole history into a serialisable form, oldest first.
     #[must_use]
     pub fn snapshot(&self) -> HistorySnapshot {
@@ -247,6 +253,19 @@ mod tests {
 
         assert!(history.minutes_between(0, u64::MAX).is_empty());
         assert_eq!(history.seconds_between(0, u64::MAX).len(), 2);
+    }
+
+    #[test]
+    fn latest_minute_appears_only_after_the_minute_closes() {
+        let mut history = History::with_capacity(10, 10);
+        history.push(point(0, 10.0));
+        assert!(history.latest_minute().is_none());
+
+        history.push(point(60_000, 20.0));
+
+        let minute = history.latest_minute().expect("a completed minute");
+        assert_eq!(minute.minute_start_ms, 0);
+        assert_eq!(minute.sample_count, 1);
     }
 
     #[test]

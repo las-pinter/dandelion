@@ -19,6 +19,7 @@ use dandelion_server::{
         token::{hash_token, random_token},
     },
     config::{self, BindAddr},
+    metrics::{self, Metrics},
     openapi::ApiDoc,
     shutdown,
     state::AppState,
@@ -134,7 +135,8 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     tracing::info!(origin = %origin.as_str(), "public origin");
 
     let auth = Auth::new(pool.clone(), origin).context("configure authentication")?;
-    let audit = AuditLog::new(pool);
+    let audit = AuditLog::new(pool.clone());
+    let metrics = Metrics::new(pool);
 
     if !auth.setup_complete().await.context("read setup state")? {
         let token = auth
@@ -156,7 +158,9 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         );
     }
 
-    serve(bind, AppState::new(audit, auth, Hub::default())).await
+    let state = AppState::new(audit, auth, Hub::default(), metrics);
+    metrics::collector::spawn(state.clone());
+    serve(bind, state).await
 }
 
 async fn run_auth(command: AuthCommand) -> Result<()> {

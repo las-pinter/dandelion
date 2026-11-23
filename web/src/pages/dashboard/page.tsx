@@ -1,58 +1,112 @@
+import { useMemo, useState } from 'react'
 import { LayoutDashboard } from 'lucide-react'
 import { mockAgents } from '@/app/mock-agents'
 import type { PageDefinition } from '@/app/page-registry'
 import { AgentRow } from '@/components/AgentRow/AgentRow'
 import { MetricCard } from '@/components/MetricCard/MetricCard'
+import { MetricChart } from '@/components/MetricChart/MetricChart'
 import { Panel } from '@/components/Panel/Panel'
+import { Button } from '@/components/ui/button'
+import { useSystemMetrics } from '@/hooks/use-system-metrics'
+import {
+  formatBytes,
+  formatRate,
+  formatUptime,
+  hottestTemperature,
+  minuteSeries,
+  rootDisk,
+  secondSeries,
+  type MetricsRange,
+} from '@/lib/metrics'
 
-interface MockMetric {
-  label: string
-  value: string
-  unit?: string
-  sparkline: number[]
-  hint: string
-}
+const GIB = 1024 ** 3
 
-const metrics: MockMetric[] = [
-  {
-    label: 'CPU',
-    value: '42',
-    unit: '%',
-    sparkline: [28, 35, 31, 40, 38, 45, 42],
-    hint: '8 cores · 3.4 GHz',
-  },
-  {
-    label: 'Memory',
-    value: '15.2',
-    unit: 'GiB',
-    sparkline: [12.1, 12.6, 13.2, 13.8, 14.5, 14.9, 15.2],
-    hint: 'of 32 GiB',
-  },
-  {
-    label: 'Disk',
-    value: '61',
-    unit: '%',
-    sparkline: [58, 58, 59, 59, 60, 60, 61],
-    hint: 'of 1.8 TiB',
-  },
-  {
-    label: 'Load',
-    value: '2.41',
-    sparkline: [1.8, 2.2, 2.0, 2.6, 2.3, 2.7, 2.41],
-    hint: '1 minute average',
-  },
-]
+export function DashboardPage() {
+  const [range, setRange] = useState<MetricsRange>('1h')
+  const { snapshot, seconds, minutes, connected, error } = useSystemMetrics(range)
 
-const hostRows = [
-  ['Uptime', '12d 04h'],
-  ['Kernel', '6.17.0-35'],
-  ['Services', '18 / 20'],
-  ['Containers', '6 running'],
-  ['Sessions', '3 agents'],
-  ['TLS', 'valid · 83d'],
-]
+  const series = useMemo(() => {
+    if (range === '1h') {
+      return {
+        cpu: secondSeries(seconds, (point) => point.cpu_percent),
+        memory: secondSeries(seconds, (point) => point.memory_used_bytes / GIB),
+        load: secondSeries(seconds, (point) => point.load1),
+      }
+    }
+    return {
+      cpu: minuteSeries(minutes, (minute) => minute.cpu_percent.avg),
+      memory: minuteSeries(minutes, (minute) => minute.memory_used_bytes.avg / GIB),
+      load: minuteSeries(minutes, (minute) => minute.load1.avg),
+    }
+  }, [range, seconds, minutes])
 
-function DashboardPage() {
+  const disk = snapshot ? rootDisk(snapshot) : undefined
+  const diskPercent =
+    disk && disk.total_bytes > 0 ? (disk.used_bytes / disk.total_bytes) * 100 : undefined
+  const hottest = snapshot ? hottestTemperature(snapshot) : undefined
+  const rx = snapshot?.network.reduce((sum, interface_) => sum + interface_.rx_bytes_per_sec, 0)
+  const tx = snapshot?.network.reduce((sum, interface_) => sum + interface_.tx_bytes_per_sec, 0)
+
+  const metrics = [
+    {
+      label: 'CPU',
+      value: snapshot ? Math.round(snapshot.cpu.usage_percent) : '—',
+      unit: snapshot ? '%' : undefined,
+      sparkline: snapshot ? sparkline(series.cpu) : undefined,
+      hint: snapshot
+        ? `${snapshot.cpu.per_core_percent.length} cores`
+        : 'waiting for the first sample',
+    },
+    {
+      label: 'Memory',
+      value: snapshot ? (snapshot.memory.used_bytes / GIB).toFixed(1) : '—',
+      unit: snapshot ? 'GiB' : undefined,
+      sparkline: snapshot ? sparkline(series.memory) : undefined,
+      hint: snapshot ? `of ${(snapshot.memory.total_bytes / GIB).toFixed(0)} GiB` : undefined,
+    },
+    {
+      label: 'Disk',
+      value: diskPercent === undefined ? '—' : Math.round(diskPercent),
+      unit: diskPercent === undefined ? undefined : '%',
+      hint: disk ? `of ${formatBytes(disk.total_bytes)}` : 'root filesystem',
+    },
+    {
+      label: 'Load',
+      value: snapshot ? snapshot.cpu.load.one.toFixed(2) : '—',
+      sparkline: snapshot ? sparkline(series.load) : undefined,
+      hint: '1 minute average',
+    },
+  ]
+
+  const hostRows: [string, string][] = snapshot
+    ? [
+        ['Uptime', formatUptime(snapshot.uptime_secs)],
+        ['Cores', String(snapshot.cpu.per_core_percent.length)],
+        [
+          'Load',
+          `${snapshot.cpu.load.one.toFixed(2)} / ${snapshot.cpu.load.five.toFixed(2)} / ${snapshot.cpu.load.fifteen.toFixed(2)}`,
+        ],
+        [
+          'Memory',
+          `${formatBytes(snapshot.memory.used_bytes)} / ${formatBytes(snapshot.memory.total_bytes)}`,
+        ],
+        [
+          'Root disk',
+          disk ? `${formatBytes(disk.used_bytes)} / ${formatBytes(disk.total_bytes)}` : '—',
+        ],
+        ['Network', `${formatRate(rx ?? 0)} down · ${formatRate(tx ?? 0)} up`],
+        ['Hottest', hottest === undefined ? '—' : `${hottest.toFixed(1)} °C`],
+      ]
+    : [
+        ['Uptime', '—'],
+        ['Cores', '—'],
+        ['Load', '—'],
+        ['Memory', '—'],
+        ['Root disk', '—'],
+        ['Network', '—'],
+        ['Hottest', '—'],
+      ]
+
   const waiting = mockAgents.filter((agent) => agent.status === 'waiting').length
   const attention = mockAgents.filter(
     (agent) => agent.status === 'waiting' || agent.status === 'error',
@@ -76,10 +130,44 @@ function DashboardPage() {
           <MetricCard key={metric.label} {...metric} />
         ))}
       </div>
+      <Panel
+        title="Performance"
+        description={
+          connected ? 'Live · one sample per second' : (error ?? 'Connecting to the live stream…')
+        }
+        actions={
+          <div className="flex items-center gap-1" role="group" aria-label="History window">
+            {(['1h', '7d'] as const).map((option) => (
+              <Button
+                key={option}
+                type="button"
+                size="sm"
+                variant={range === option ? 'default' : 'ghost'}
+                aria-pressed={range === option}
+                onClick={() => setRange(option)}
+              >
+                {option === '1h' ? '1 hour' : '7 days'}
+              </Button>
+            ))}
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <MetricChart
+            label="CPU"
+            unit="%"
+            points={series.cpu}
+            domain={[0, 100]}
+            color="var(--chart-1)"
+          />
+          <MetricChart label="Memory" unit="GiB" points={series.memory} color="var(--chart-2)" />
+          <MetricChart label="Load" points={series.load} color="var(--chart-3)" />
+        </div>
+      </Panel>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel
           title="Agents"
-          description={`${mockAgents.length} tracked on this host`}
+          description={`${mockAgents.length} sample agents until the agents API lands`}
           status={waiting > 0 ? 'waiting' : 'idle'}
           actions={
             <span className="font-mono text-xs text-muted-foreground">
@@ -108,6 +196,10 @@ function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function sparkline(points: { value: number }[]): number[] {
+  return points.slice(-40).map((point) => point.value)
 }
 
 export const page: PageDefinition = {
