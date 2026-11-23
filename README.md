@@ -67,6 +67,27 @@ The SQLite database path is chosen in this order: `--data-dir`,
 (`0700`) and the database file is `0600`. Embedded migrations run on start, and
 control actions append to the `audit_log` table.
 
+## Services and sudo
+
+The Services page lists user and system units and reads a unit's journal tail.
+User-unit actions run over D-Bus as this account. A system-unit action needs an
+entry in `<data-dir>/sudo-allowlist.toml`:
+
+```toml
+[[rules]]
+unit = "nginx.service"
+verbs = ["restart", "start"]
+```
+
+`just install-sudoers` renders that file into
+`/etc/sudoers.d/dandelion-services` (`0440`, root) and validates it with
+`visudo -c`; a password prompt is expected once. Rerun it after changing the
+allowlist, and restart the server so it reads the new rules. `just
+install-sudoers --data-dir /path` reads a non-default data directory.
+`dandelion sudoers` prints the drop-in without installing it. Without the
+drop-in, system-unit actions report that passwordless sudo is unavailable, and
+the refusal is audited.
+
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
 

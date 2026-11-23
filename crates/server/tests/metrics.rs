@@ -17,6 +17,7 @@ use dandelion_server::{
         token::{hash_token, random_token},
     },
     metrics::{self, Metrics, TOPIC},
+    services::Services,
     state::AppState,
     storage,
     ws::hub::Hub,
@@ -39,6 +40,7 @@ async fn test_state() -> AppState {
         auth,
         Hub::default(),
         Metrics::new(pool),
+        Services::disabled(),
     )
 }
 

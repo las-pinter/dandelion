@@ -29,6 +29,16 @@ tailnet-serve:
 tailnet-operator:
     sudo tailscale set --operator=$USER
 
+# Install the sudoers drop-in generated from <data-dir>/sudo-allowlist.toml.
+# Run it again after changing the allowlist and restart the server. Needs a
+# password once. Pass `--data-dir /path` when the server does not use the default.
+install-sudoers *args:
+    mkdir -p target
+    cargo run --quiet --locked -p dandelion-server -- sudoers {{args}} > target/dandelion-services.sudoers
+    sudo visudo -cf target/dandelion-services.sudoers
+    sudo install -m 0440 -o root -g root target/dandelion-services.sudoers /etc/sudoers.d/dandelion-services
+    sudo visudo -c
+
 # Browse and build components in isolation.
 storybook:
     {{web}} storybook

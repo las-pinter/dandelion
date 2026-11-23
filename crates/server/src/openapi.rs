@@ -32,6 +32,9 @@ use crate::auth::routes::{
         crate::processes::list,
         crate::processes::signal,
         crate::processes::renice,
+        crate::services::snapshot,
+        crate::services::action,
+        crate::services::journal,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -46,6 +49,15 @@ use crate::auth::routes::{
         dandelion_system::process::ProcessSignal,
         dandelion_system::process::SignalRequest,
         dandelion_system::process::ReniceRequest,
+        crate::services::ServicesSnapshot,
+        dandelion_system::systemd::UnitInfo,
+        dandelion_system::systemd::UnitScope,
+        dandelion_system::systemd::UnitAction,
+        dandelion_system::systemd::UnitActionRequest,
+        dandelion_system::systemd::UnitActionResult,
+        dandelion_system::systemd::ActionMechanism,
+        dandelion_system::systemd::AllowRule,
+        dandelion_system::systemd::JournalEntry,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -105,6 +117,23 @@ mod tests {
         assert!(
             document["components"]["schemas"]["ProcessInfo"].is_object(),
             "missing ProcessInfo"
+        );
+    }
+
+    #[test]
+    fn document_lists_the_service_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in [
+            "/api/services",
+            "/api/services/action",
+            "/api/services/{scope}/{unit}/journal",
+        ] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["ServicesSnapshot"].is_object(),
+            "missing ServicesSnapshot"
         );
     }
 

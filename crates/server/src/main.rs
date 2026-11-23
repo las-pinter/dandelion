@@ -21,6 +21,7 @@ use dandelion_server::{
     config::{self, BindAddr},
     metrics::{self, Metrics},
     openapi::ApiDoc,
+    services::{self, Services},
     shutdown,
     state::AppState,
     storage,
@@ -67,6 +68,15 @@ enum Command {
     },
     /// Verify that the embedded web application is present.
     Assets,
+    /// Print the sudoers drop-in generated from the allowlist file.
+    Sudoers {
+        /// Data directory that holds sudo-allowlist.toml.
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
+        /// Account name for the drop-in; defaults to `$USER`.
+        #[arg(long)]
+        user: Option<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -91,6 +101,7 @@ async fn main() -> Result<()> {
         Some(Command::Openapi) => print_openapi(),
         Some(Command::TsTypes { out_dir }) => export_ts_types(&out_dir),
         Some(Command::Assets) => check_assets(),
+        Some(Command::Sudoers { data_dir, user }) => print_sudoers(data_dir, user),
     }
 }
 
@@ -128,7 +139,7 @@ fn check_assets() -> Result<()> {
 }
 
 async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
-    let (_data_dir, pool) = open_database(data_dir).await?;
+    let (data_dir, pool) = open_database(data_dir).await?;
     let origin = PublicOrigin::resolve().await.context(
         "resolve the public origin; set DANDELION_PUBLIC_URL when Tailscale is unavailable",
     )?;
@@ -158,9 +169,38 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         );
     }
 
-    let state = AppState::new(audit, auth, Hub::default(), metrics);
+    let allowlist_path = config::allowlist_path(&data_dir);
+    let allowlist = services::load_allowlist(&allowlist_path)
+        .with_context(|| format!("load the sudo allowlist {}", allowlist_path.display()))?;
+    tracing::info!(
+        path = %allowlist_path.display(),
+        rules = allowlist.rules().len(),
+        "sudo allowlist"
+    );
+    let services = Services::connect(allowlist).await;
+
+    let state = AppState::new(audit, auth, Hub::default(), metrics, services);
     metrics::collector::spawn(state.clone());
     serve(bind, state).await
+}
+
+fn print_sudoers(data_dir: Option<PathBuf>, user: Option<String>) -> Result<()> {
+    let data_dir = config::data_dir(data_dir)?;
+    let allowlist_path = config::allowlist_path(&data_dir);
+    let allowlist = services::load_allowlist(&allowlist_path)
+        .with_context(|| format!("load the sudo allowlist {}", allowlist_path.display()))?;
+    if allowlist.is_empty() {
+        anyhow::bail!(
+            "the allowlist {} has no rules; add a [[rules]] entry first",
+            allowlist_path.display()
+        );
+    }
+    let user = user
+        .or_else(|| std::env::var("USER").ok())
+        .filter(|value| !value.is_empty())
+        .context("pass --user or set USER")?;
+    print!("{}", services::sudoers_drop_in(&allowlist, &user)?);
+    Ok(())
 }
 
 async fn run_auth(command: AuthCommand) -> Result<()> {

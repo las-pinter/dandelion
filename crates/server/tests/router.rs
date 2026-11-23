@@ -12,6 +12,7 @@ use dandelion_server::{
     audit::{AuditEntry, AuditLog},
     auth::{Auth, origin::PublicOrigin},
     metrics::Metrics,
+    services::Services,
     state::AppState,
     storage,
     ws::hub::Hub,
@@ -29,6 +30,7 @@ async fn test_state() -> AppState {
         auth,
         Hub::default(),
         Metrics::new(pool),
+        Services::disabled(),
     )
 }
 

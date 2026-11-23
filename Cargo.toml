@@ -34,6 +34,7 @@ sqlx = { version = "0.9.1", default-features = false, features = ["macros", "mig
 tempfile = "3.27.0"
 thiserror = "2.0.21"
 tokio-tungstenite = "0.29.0"
+toml = "1.2.2"
 tokio = { version = "1.54.1", features = ["fs", "io-util", "macros", "net", "process", "rt", "rt-multi-thread", "signal", "sync", "time"] }
 tower = "0.5.3"
 tracing = "0.1.44"
