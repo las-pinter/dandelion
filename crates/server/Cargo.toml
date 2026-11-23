@@ -25,6 +25,7 @@ dandelion-core.workspace = true
 dandelion-pty.workspace = true
 dandelion-sysmon.workspace = true
 dandelion-system.workspace = true
+dandelion-terminals.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 mime_guess.workspace = true
@@ -45,6 +46,8 @@ uuid.workspace = true
 webauthn-rs.workspace = true
 
 [dev-dependencies]
+async-trait.workspace = true
+dandelion-terminals = { workspace = true, features = ["test-support"] }
 http-body-util.workspace = true
 tempfile.workspace = true
 tokio-tungstenite.workspace = true

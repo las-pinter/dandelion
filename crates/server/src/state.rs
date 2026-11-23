@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use crate::{
-    audit::AuditLog, auth::Auth, containers::Containers, metrics::Metrics, services::Services,
-    terminal::Terminals, ws::hub::Hub,
+    agents::Agents, audit::AuditLog, auth::Auth, containers::Containers, metrics::Metrics,
+    services::Services, terminal::Terminals, ws::hub::Hub,
 };
 
 /// Handlers share the audit log, authentication, the hub, live metrics,
@@ -25,6 +25,8 @@ pub struct AppState {
     pub containers: Containers,
     /// The shells this server holds open for the web terminal.
     pub terminals: Terminals,
+    /// The herdr backend that lists and drives agents.
+    pub agents: Agents,
 }
 
 impl AppState {
@@ -37,6 +39,7 @@ impl AppState {
         metrics: Metrics,
         services: Services,
         containers: Containers,
+        agents: Agents,
     ) -> Self {
         Self {
             audit,
@@ -46,6 +49,7 @@ impl AppState {
             services: Arc::new(services),
             containers,
             terminals: Terminals::default(),
+            agents,
         }
     }
 

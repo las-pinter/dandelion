@@ -10,6 +10,7 @@ use axum::{
     response::Response,
 };
 use dandelion_server::{
+    agents::Agents,
     app::build_router,
     audit::AuditLog,
     auth::{
@@ -44,6 +45,7 @@ async fn state_with(containers: Containers) -> AppState {
         Metrics::new(pool),
         Services::disabled(),
         containers,
+        Agents::disabled(),
     )
 }
 

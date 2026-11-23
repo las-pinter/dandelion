@@ -1,6 +1,7 @@
 import type { components } from '@/api/gen/schema'
 
-export type TerminalInfo = components['schemas']['TerminalInfo']
+/** The local shell the Terminal page opens (the server's `ShellInfo`). */
+export type TerminalInfo = components['schemas']['ShellInfo']
 
 /** Most shells the server holds open at once; mirrors `MAX_TERMINALS`. */
 export const MAX_TERMINALS = 8

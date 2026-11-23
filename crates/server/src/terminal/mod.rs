@@ -46,7 +46,7 @@ pub const UNATTACHED_TTL_SECS: i64 = 30;
 
 /// What the page needs to know about one open shell.
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct TerminalInfo {
+pub struct ShellInfo {
     /// Terminal id, as a UUID string.
     pub id: String,
     /// The shell that runs in it.
@@ -118,9 +118,9 @@ impl Terminal {
 
     /// The terminal's current description.
     #[must_use]
-    pub fn info(&self) -> TerminalInfo {
+    pub fn info(&self) -> ShellInfo {
         let (cols, rows) = self.pty.size();
-        TerminalInfo {
+        ShellInfo {
             id: self.id.to_string(),
             shell: self.pty.shell().to_owned(),
             cols,
@@ -150,7 +150,7 @@ impl Terminals {
     ///
     /// Returns [`TerminalError::Limit`] when [`MAX_TERMINALS`] are open and
     /// [`TerminalError::Pty`] when the shell cannot start.
-    pub fn open(&self, request: &OpenTerminalRequest) -> Result<TerminalInfo, TerminalError> {
+    pub fn open(&self, request: &OpenTerminalRequest) -> Result<ShellInfo, TerminalError> {
         let mut sessions = self.sessions.lock().map_err(|_| TerminalError::NotFound)?;
         reap(&mut sessions);
         if sessions.len() >= MAX_TERMINALS {
@@ -199,13 +199,12 @@ impl Terminals {
 
     /// Every open terminal, oldest first.
     #[must_use]
-    pub fn list(&self) -> Vec<TerminalInfo> {
+    pub fn list(&self) -> Vec<ShellInfo> {
         let Ok(mut sessions) = self.sessions.lock() else {
             return Vec::new();
         };
         reap(&mut sessions);
-        let mut infos: Vec<TerminalInfo> =
-            sessions.values().map(|terminal| terminal.info()).collect();
+        let mut infos: Vec<ShellInfo> = sessions.values().map(|terminal| terminal.info()).collect();
         infos.sort_by(|left, right| {
             (left.created_at_unix, &left.id).cmp(&(right.created_at_unix, &right.id))
         });
@@ -255,7 +254,7 @@ pub fn router() -> Router<AppState> {
     operation_id = "terminals_open",
     request_body = OpenTerminalRequest,
     responses(
-        (status = 200, description = "The shell opened", body = TerminalInfo),
+        (status = 200, description = "The shell opened", body = ShellInfo),
         (status = 400, description = "The shell could not start", body = ApiError),
         (status = 409, description = "Too many terminals are open", body = ApiError)
     )
@@ -300,7 +299,7 @@ pub async fn open(
     tag = "terminals",
     operation_id = "terminals_list",
     responses(
-        (status = 200, description = "Every open terminal", body = Vec<TerminalInfo>)
+        (status = 200, description = "Every open terminal", body = Vec<ShellInfo>)
     )
 )]
 pub async fn list(State(state): State<AppState>) -> Response {

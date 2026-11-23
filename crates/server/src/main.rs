@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use dandelion_core::BuildInfo;
 use dandelion_server::{
+    agents::{self, Agents},
     app,
     audit::{AuditEntry, AuditLog},
     auth::{
@@ -180,9 +181,19 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     );
     let services = Services::connect(allowlist).await;
     let containers = Containers::connect();
+    let agents = Agents::connect().await;
 
-    let state = AppState::new(audit, auth, Hub::default(), metrics, services, containers);
+    let state = AppState::new(
+        audit,
+        auth,
+        Hub::default(),
+        metrics,
+        services,
+        containers,
+        agents,
+    );
     metrics::collector::spawn(state.clone());
+    agents::spawn_publisher(state.clone());
     serve(bind, state).await
 }
 

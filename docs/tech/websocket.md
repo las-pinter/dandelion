@@ -57,6 +57,10 @@ transport.
 | Topic | Payload | Cadence |
 |---|---|---|
 | `system.metrics` | `LiveSample`: `{ snapshot, point }` — the full `Snapshot` plus the compact `MetricsPoint` the server also stores | One per second while the collector runs |
+| `agents` | `{ kind: "resync", terminals: [...] }` when the server's backend subscription starts or restarts, then `{ kind: "terminal", terminal, change }` per backend event | On every backend state change |
+
+A browser that subscribes later does not receive that resync; it takes its
+first paint from `GET /api/agents` and follows the topic for changes.
 
 Stored history is read over REST: `GET /api/system/history?range=1h` returns
 second points, `?range=7d` returns minute aggregates, and
@@ -88,6 +92,23 @@ terminal_busy`. Binary frames carry terminal bytes both ways; text frames carry
 ends when the socket does, and its whole process session is killed so a
 background child cannot keep the pseudo-terminal open.
 
+## Agent socket
+
+Each agent pane has its own socket, `GET /api/agents/{terminal}/ws`, with the
+same session-cookie and origin handshake, 30-second session recheck, logout
+close, and 64 KiB frame cap as the other sockets. The server attaches as an
+observer: the pane never types into or resizes the agent's real terminal, so
+control stays in the audited action API (`POST /api/agents/action`). Binary
+frames carry pane bytes both ways; text frames carry
+`{"type":"resize","cols":N,"rows":N}`, which an observer accepts without
+resizing anything. The server sends `{"type":"resized",...}` when the backend
+reports a size, and `{"type":"closed","reason":…}` or
+`{"type":"error","message":…}` before the stream ends.
+
+`GET /api/agents/{terminal}/screen` returns the visible screen only. History is
+never read: herdr-core scrolls a full-screen program to stitch it, and
+scrolling is input to that program.
+
 ## Tests
 
 `crates/server/tests/ws.rs` proves the handshake auth and origin checks
@@ -99,3 +120,7 @@ a fast one keeps receiving.
 `crates/server/tests/terminals.rs` proves the terminal handshake (including a
 foreign-origin refusal), binary input/output, resize propagation, the busy
 refusal, and that a socket close or `DELETE` ends the shell.
+
+`crates/server/tests/agents/` proves the agent routes and their audit rows
+with a fake backend, and the agent handshake (session and origin refusals),
+the observer attach, output, input, resize, and the close that ends it.

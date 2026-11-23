@@ -3,6 +3,7 @@
 //! `main.rs` wires these modules into the binary. Keeping them in a library
 //! lets the router be tested without binding a socket.
 
+pub mod agents;
 pub mod app;
 pub mod audit;
 pub mod auth;

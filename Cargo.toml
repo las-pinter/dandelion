@@ -21,6 +21,7 @@ dandelion-core = { path = "crates/core" }
 dandelion-pty = { path = "crates/pty" }
 dandelion-sysmon = { path = "crates/sysmon" }
 dandelion-system = { path = "crates/system" }
+dandelion-terminals = { path = "crates/terminals" }
 futures-util = "0.3.34"
 getrandom = "0.4.3"
 http-body-util = "0.1.5"

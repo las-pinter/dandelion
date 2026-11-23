@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/api/client'
-import type { ServerMessage } from '@/api/gen/ws/ServerMessage'
 import {
   HOUR_MS,
   isLiveSample,
@@ -11,9 +10,9 @@ import {
   type MinuteAggregate,
   type Snapshot,
 } from '@/lib/metrics'
+import { useHubTopics } from './use-hub-topics'
 
 const TOPIC = 'system.metrics'
-const MAX_RETRY_MS = 30_000
 const REFRESH_MS = 5 * 60_000
 
 export interface SystemMetricsState {
@@ -42,7 +41,6 @@ export function useSystemMetrics(range: MetricsRange): SystemMetricsState {
   const [live, setLive] = useState<MetricsPoint | null>(null)
   const [seconds, setSeconds] = useState<MetricsPoint[]>([])
   const [minutes, setMinutes] = useState<MinuteAggregate[]>([])
-  const [connected, setConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [refresh, setRefresh] = useState(0)
   const request = useMemo(() => ({ range, refresh }), [range, refresh])
@@ -85,56 +83,18 @@ export function useSystemMetrics(range: MetricsRange): SystemMetricsState {
     return () => window.clearInterval(timer)
   }, [])
 
-  useEffect(() => {
-    let socket: WebSocket | null = null
-    let timer: number | undefined
-    let retries = 0
-    let stopped = false
-
-    const connect = () => {
-      const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
-      socket = new WebSocket(`${scheme}://${window.location.host}/api/ws`)
-      socket.addEventListener('open', () => {
-        const reconnected = retries > 0
-        retries = 0
-        setConnected(true)
-        socket?.send(JSON.stringify({ type: 'subscribe', topics: [TOPIC] }))
-        if (reconnected) setRefresh((value) => value + 1)
-      })
-      socket.addEventListener('message', (event) => {
-        if (typeof event.data !== 'string') return
-        const message = parseServerMessage(event.data)
-        if (message?.type !== 'event' || message.topic !== TOPIC) return
-        if (!isLiveSample(message.data)) return
-
-        const sample = message.data
-        setSnapshot((previous) =>
-          !previous || sample.snapshot.timestamp_ms >= previous.timestamp_ms
-            ? sample.snapshot
-            : previous,
-        )
-        setLive((previous) =>
-          !previous || sample.point.timestamp_ms >= previous.timestamp_ms ? sample.point : previous,
-        )
-      })
-      socket.addEventListener('close', () => {
-        setConnected(false)
-        socket = null
-        if (stopped) return
-        const delay = Math.min(MAX_RETRY_MS, 1_000 * 2 ** retries)
-        retries += 1
-        timer = window.setTimeout(connect, delay)
-      })
-      socket.addEventListener('error', () => socket?.close())
-    }
-
-    connect()
-    return () => {
-      stopped = true
-      window.clearTimeout(timer)
-      socket?.close()
-    }
-  }, [])
+  const connected = useHubTopics([TOPIC], {
+    onEvent: (topic, data) => {
+      if (topic !== TOPIC || !isLiveSample(data)) return
+      setSnapshot((previous) =>
+        !previous || data.snapshot.timestamp_ms >= previous.timestamp_ms ? data.snapshot : previous,
+      )
+      setLive((previous) =>
+        !previous || data.point.timestamp_ms >= previous.timestamp_ms ? data.point : previous,
+      )
+    },
+    onReconnect: () => setRefresh((value) => value + 1),
+  })
 
   const secondsWithLive = useMemo(() => {
     if (range !== '1h' || !live) return seconds
@@ -142,14 +102,4 @@ export function useSystemMetrics(range: MetricsRange): SystemMetricsState {
   }, [range, seconds, live])
 
   return { snapshot, seconds: secondsWithLive, minutes, connected, error }
-}
-
-function parseServerMessage(text: string): ServerMessage | null {
-  try {
-    const value: unknown = JSON.parse(text)
-    if (typeof value !== 'object' || value === null || !('type' in value)) return null
-    return value as ServerMessage
-  } catch {
-    return null
-  }
 }

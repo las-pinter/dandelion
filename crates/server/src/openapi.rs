@@ -41,6 +41,10 @@ use crate::auth::routes::{
         crate::terminal::open,
         crate::terminal::list,
         crate::terminal::close,
+        crate::agents::routes::snapshot,
+        crate::agents::routes::action,
+        crate::agents::routes::spawn,
+        crate::agents::routes::screen,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -64,16 +68,33 @@ use crate::auth::routes::{
         dandelion_system::systemd::ActionMechanism,
         dandelion_system::systemd::AllowRule,
         dandelion_system::systemd::JournalEntry,
-        crate::containers::ContainersSnapshot,
-        crate::containers::ContainerAction,
+        crate::containers::ContainersSnapshot,        crate::containers::ContainerAction,
         crate::containers::ContainerActionRequest,
         dandelion_system::docker::ContainerInfo,
         dandelion_system::docker::ContainerState,
         dandelion_system::docker::ContainerLogLine,
         dandelion_system::docker::LogStream,
         dandelion_system::docker::DockerAvailability,
-        crate::terminal::TerminalInfo,
+        crate::terminal::ShellInfo,
         crate::terminal::OpenTerminalRequest,
+        crate::agents::AgentsSnapshot,
+        crate::agents::AgentAction,
+        crate::agents::AgentActionRequest,
+        crate::agents::SpawnAgentRequest,
+        dandelion_terminals::AgentKind,
+        dandelion_terminals::AgentState,
+        dandelion_terminals::AgentStatus,
+        dandelion_terminals::Access,
+        dandelion_terminals::BackendDescriptor,
+        dandelion_terminals::BackendKind,
+        dandelion_terminals::BlockedReason,
+        dandelion_terminals::ProtocolId,
+        dandelion_terminals::ReadOrigin,
+        dandelion_terminals::ScreenText,
+        dandelion_terminals::TerminalId,
+        dandelion_terminals::TerminalInfo,
+        dandelion_terminals::TerminalLifecycle,
+        dandelion_terminals::TerminalSize,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -198,8 +219,26 @@ mod tests {
             assert!(document["paths"][path].is_object(), "missing {path}");
         }
         assert!(
-            document["components"]["schemas"]["TerminalInfo"].is_object(),
-            "missing TerminalInfo"
+            document["components"]["schemas"]["ShellInfo"].is_object(),
+            "missing ShellInfo"
+        );
+    }
+
+    #[test]
+    fn document_lists_the_agent_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in [
+            "/api/agents",
+            "/api/agents/action",
+            "/api/agents/spawn",
+            "/api/agents/{terminal}/screen",
+        ] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["AgentsSnapshot"].is_object(),
+            "missing AgentsSnapshot"
         );
     }
 

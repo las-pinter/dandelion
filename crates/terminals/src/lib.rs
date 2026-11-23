@@ -49,7 +49,7 @@ pub use model::{
     ReadOptions, ReadOrigin, ScreenText, SendOptions, SendOutcome, SpawnSpec, TerminalFilter,
     TerminalId, TerminalInfo, TerminalLifecycle, TerminalSize,
 };
-pub use stream::{AttachEvent, AttachSession, EventStream};
+pub use stream::{AttachCommand, AttachEvent, AttachSession, EventStream};
 
 /// The version of this crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

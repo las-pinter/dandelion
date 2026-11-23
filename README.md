@@ -98,6 +98,19 @@ its socket, so closing the tab, the browser, or the session ends it; opening
 and closing are audited, the typed input never is. At most eight shells may be
 open at once.
 
+## Agents
+
+The Agents page lists live agents from herdr-core (classic herdr is the
+fallback), shows each one's state and blocked reason, streams its pane over a
+dedicated socket, and sends a prompt, approves or denies a waiting prompt,
+interrupts, kills, or starts a new agent in a working directory. The pane is
+read-only: viewing must not resize the agent's real terminal, so control goes
+through the audited action API. State changes arrive on the `agents` WebSocket
+topic. herdr-core has no approve call, so approval presses Enter and denial
+presses Escape. Starting an agent means
+running a command line in a directory, usually a worktree path; herdr-core has
+no workspace object of its own.
+
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
 

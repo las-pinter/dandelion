@@ -7,6 +7,11 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[features]
+# Exposes the attach-session channel constructor so another crate's tests can
+# stand in for a backend. Never enabled by a normal build.
+test-support = []
+
 [dependencies]
 async-trait.workspace = true
 base64.workspace = true

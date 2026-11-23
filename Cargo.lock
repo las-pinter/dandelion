@@ -780,6 +780,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "argon2 0.6.0",
+ "async-trait",
  "axum",
  "base64 0.23.1",
  "clap",
@@ -787,6 +788,7 @@ dependencies = [
  "dandelion-pty",
  "dandelion-sysmon",
  "dandelion-system",
+ "dandelion-terminals",
  "futures-util",
  "getrandom 0.4.3",
  "http-body-util",
