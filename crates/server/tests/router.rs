@@ -8,15 +8,21 @@ use axum::{
     routing::post,
 };
 use dandelion_server::{
-    app::{build_router, router},
+    app::{build_router, router_for_tests},
     audit::{AuditEntry, AuditLog},
+    auth::{Auth, origin::PublicOrigin},
     state::AppState,
+    storage,
 };
 use http_body_util::BodyExt;
 use tower::ServiceExt;
 
 async fn test_state() -> AppState {
-    AppState::new(AuditLog::in_memory().await.expect("in-memory audit log"))
+    let pool = storage::open_in_memory().await.expect("in-memory database");
+    let origin = PublicOrigin::parse("https://example.test").expect("test origin");
+    let auth = Auth::new(pool.clone(), origin).expect("auth services");
+
+    AppState::new(AuditLog::new(pool), auth)
 }
 
 async fn send(uri: &str) -> Response {
@@ -99,7 +105,7 @@ async fn openapi_document_exposes_health() {
 async fn mutating_handler_writes_one_audit_row() {
     let state = test_state().await;
     let audit = state.audit.clone();
-    let app = router()
+    let app = router_for_tests()
         .route("/api/test-mutation", post(test_mutation))
         .with_state(state);
 

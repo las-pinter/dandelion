@@ -1,17 +1,27 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppShell } from '@/components/AppShell/AppShell'
 import { NotFound } from '@/components/NotFound/NotFound'
+import { RequireAuth } from '@/components/RequireAuth/RequireAuth'
 import { pages, type PageDefinition } from './page-registry'
 
 export function buildRoutes(registered: PageDefinition[]): RouteObject[] {
-  const [first] = registered
+  const shellPages = registered.filter((page) => page.standalone !== true)
+  const standalonePages = registered.filter((page) => page.standalone === true)
+  const [first] = shellPages
+
   return [
+    // Sign in and setup render before a session exists, outside the shell.
+    ...standalonePages.map(({ path, Component }) => ({ path, element: <Component /> })),
     {
-      element: <AppShell pages={registered} />,
+      element: (
+        <RequireAuth>
+          <AppShell pages={shellPages} />
+        </RequireAuth>
+      ),
       children: [
         // Only redirect when a target exists; redirecting `/` to `/` would loop.
         ...(first ? [{ index: true, element: <Navigate to={first.path} replace /> }] : []),
-        ...registered.flatMap(({ path, Component }) =>
+        ...shellPages.flatMap(({ path, Component }) =>
           path === '/'
             ? [{ path, element: <Component /> }]
             : [

@@ -18,6 +18,8 @@ export interface PageDefinition {
   badge?: string
   /** Extra command-palette entries this page contributes. */
   commands?: PaletteCommand[]
+  /** Render outside the app shell, with no navigation (sign in, setup). */
+  standalone?: boolean
   Component: ComponentType
 }
 
