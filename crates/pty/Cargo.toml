@@ -1,0 +1,17 @@
+[package]
+name = "dandelion-pty"
+description = "Local pseudo-terminals for the Dandelion web terminal."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+portable-pty.workspace = true
+rustix.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

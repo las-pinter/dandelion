@@ -88,6 +88,16 @@ install-sudoers --data-dir /path` reads a non-default data directory.
 drop-in, system-unit actions report that passwordless sudo is unavailable, and
 the refusal is audited.
 
+## Terminal
+
+The Terminal page opens a shell as the server account, one per terminal tab,
+rendered with xterm.js (loaded only when that page needs it). The shell runs on
+a real pseudo-terminal: raw bytes ride a dedicated WebSocket in binary frames,
+and resizes arrive as small JSON control frames. A shell lives only as long as
+its socket, so closing the tab, the browser, or the session ends it; opening
+and closing are audited, the typed input never is. At most eight shells may be
+open at once.
+
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
 

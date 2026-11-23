@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::{
     audit::AuditLog, auth::Auth, containers::Containers, metrics::Metrics, services::Services,
-    ws::hub::Hub,
+    terminal::Terminals, ws::hub::Hub,
 };
 
 /// Handlers share the audit log, authentication, the hub, live metrics,
@@ -23,6 +23,8 @@ pub struct AppState {
     pub services: Arc<Services>,
     /// Docker access; actions are disabled when the socket is missing.
     pub containers: Containers,
+    /// The shells this server holds open for the web terminal.
+    pub terminals: Terminals,
 }
 
 impl AppState {
@@ -43,6 +45,24 @@ impl AppState {
             metrics,
             services: Arc::new(services),
             containers,
+            terminals: Terminals::default(),
+        }
+    }
+
+    /// True while the session behind `token_hash` is still valid.
+    ///
+    /// Live sockets use this to drop a revoked or expired login.
+    pub async fn session_is_live(&self, token_hash: &str) -> bool {
+        match self
+            .auth
+            .session_live(token_hash, crate::auth::session::now_millis())
+            .await
+        {
+            Ok(live) => live,
+            Err(error) => {
+                tracing::error!(%error, "session recheck failed");
+                false
+            }
         }
     }
 }

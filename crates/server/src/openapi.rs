@@ -38,6 +38,9 @@ use crate::auth::routes::{
         crate::containers::snapshot,
         crate::containers::action,
         crate::containers::logs,
+        crate::terminal::open,
+        crate::terminal::list,
+        crate::terminal::close,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -69,6 +72,8 @@ use crate::auth::routes::{
         dandelion_system::docker::ContainerLogLine,
         dandelion_system::docker::LogStream,
         dandelion_system::docker::DockerAvailability,
+        crate::terminal::TerminalInfo,
+        crate::terminal::OpenTerminalRequest,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -183,6 +188,19 @@ mod tests {
             }
         }
         assert!(!seen.is_empty(), "the document lists operations");
+    }
+
+    #[test]
+    fn document_lists_the_terminal_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in ["/api/terminals", "/api/terminals/{id}"] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["TerminalInfo"].is_object(),
+            "missing TerminalInfo"
+        );
     }
 
     #[test]

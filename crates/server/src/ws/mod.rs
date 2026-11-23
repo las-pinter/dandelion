@@ -35,7 +35,6 @@ use crate::{
     auth::{
         Revocation,
         middleware::{RequestUser, error_response, origin_allowed},
-        session::now_millis,
     },
     state::AppState,
 };
@@ -143,7 +142,7 @@ async fn connection(socket: WebSocket, state: AppState, user: RequestUser) {
                 }
             }
             _ = recheck.tick() => {
-                if !session_is_live(&state, &user.token_hash).await {
+                if !state.session_is_live(&user.token_hash).await {
                     tracing::info!("closing a websocket whose session ended");
                     break;
                 }
@@ -159,16 +158,6 @@ async fn connection(socket: WebSocket, state: AppState, user: RequestUser) {
         }
     }
     // Dropping both halves closes the socket.
-}
-
-async fn session_is_live(state: &AppState, token_hash: &str) -> bool {
-    match state.auth.session_live(token_hash, now_millis()).await {
-        Ok(live) => live,
-        Err(error) => {
-            tracing::error!(%error, "session recheck failed");
-            false
-        }
-    }
 }
 
 /// One event, or the receiver error that closes the connection.

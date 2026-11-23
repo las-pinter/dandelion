@@ -412,6 +412,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists the open shells. */
+        get: operations["terminals_list"];
+        put?: never;
+        /** Opens a shell. */
+        post: operations["terminals_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/terminals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Closes one shell. */
+        delete: operations["terminals_close"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -795,6 +830,19 @@ export interface components {
              */
             tx_bytes_per_sec: number;
         };
+        /** @description A request to open a shell. */
+        OpenTerminalRequest: {
+            /**
+             * Format: int32
+             * @description Initial width in cells; defaults to 80.
+             */
+            cols?: number | null;
+            /**
+             * Format: int32
+             * @description Initial height in cells; defaults to 24.
+             */
+            rows?: number | null;
+        };
         /** @description A process and its resource usage at sample time. */
         Process: {
             /**
@@ -975,6 +1023,30 @@ export interface components {
             chip: string;
             /** @description Sensor label within the chip. */
             label: string;
+        };
+        /** @description What the page needs to know about one open shell. */
+        TerminalInfo: {
+            /** @description True while a browser socket is attached to this shell. */
+            attached: boolean;
+            /**
+             * Format: int32
+             * @description Current width in cells.
+             */
+            cols: number;
+            /**
+             * Format: int64
+             * @description Creation time as a Unix timestamp in seconds.
+             */
+            created_at_unix: number;
+            /** @description Terminal id, as a UUID string. */
+            id: string;
+            /**
+             * Format: int32
+             * @description Current height in cells.
+             */
+            rows: number;
+            /** @description The shell that runs in it. */
+            shell: string;
         };
         /** @description Setup token in or out of a query string. */
         TokenQuery: {
@@ -1909,6 +1981,98 @@ export interface operations {
             };
             /** @description No sample yet */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    terminals_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every open terminal */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TerminalInfo"][];
+                };
+            };
+        };
+    };
+    terminals_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenTerminalRequest"];
+            };
+        };
+        responses: {
+            /** @description The shell opened */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TerminalInfo"];
+                };
+            };
+            /** @description The shell could not start */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too many terminals are open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    terminals_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description terminal id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The shell closed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such terminal */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
