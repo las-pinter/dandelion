@@ -47,7 +47,11 @@ pub fn router() -> Router<AppState> {
 )]
 pub async fn snapshot(State(state): State<AppState>) -> Response {
     match state.agents.snapshot().await {
-        Ok(snapshot) => Json(snapshot).into_response(),
+        Ok(listing) => {
+            // The Claude cache is independent of the terminal backend, so the
+            // page still shows sessions while herdr is down.
+            Json(AgentsSnapshot::compose(listing, state.claude.snapshot())).into_response()
+        }
         Err(error) => agents_error_response(&error),
     }
 }

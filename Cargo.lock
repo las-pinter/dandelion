@@ -784,6 +784,7 @@ dependencies = [
  "axum",
  "base64 0.23.1",
  "clap",
+ "dandelion-claude",
  "dandelion-core",
  "dandelion-pty",
  "dandelion-sysmon",

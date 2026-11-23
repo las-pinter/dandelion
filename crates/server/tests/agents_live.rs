@@ -4,8 +4,26 @@
 
 use std::time::Duration;
 
-use dandelion_server::agents::{AgentAction, AgentActionRequest, Agents, SpawnAgentRequest};
+use dandelion_server::{
+    agents::{AgentAction, AgentActionRequest, Agents, SpawnAgentRequest},
+    claude::ClaudeMonitor,
+};
 use dandelion_terminals::{BackendKind, TerminalFilter};
+
+/// Reads this machine's Claude sessions and their token totals.
+#[tokio::test]
+#[ignore = "needs live Claude Code sessions"]
+async fn the_live_claude_monitor_reads_sessions() {
+    let monitor = ClaudeMonitor::from_home();
+    assert!(monitor.is_enabled(), "~/.claude is readable");
+    let _ = monitor.refresh();
+    let sessions = monitor.snapshot();
+    assert!(!sessions.is_empty(), "at least one live Claude session");
+    for session in &sessions {
+        assert_ne!(session.session_id, "");
+        let _ = (&session.usage.tokens, session.terminal.as_deref());
+    }
+}
 
 /// Lists the live backend's agents.
 #[tokio::test]

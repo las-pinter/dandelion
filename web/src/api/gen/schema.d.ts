@@ -588,6 +588,8 @@ export interface components {
             /** @description Whether a backend answered. */
             available: boolean;
             backend?: components["schemas"]["BackendDescriptor"] | null;
+            /** @description Claude Code sessions, when that state directory is readable. */
+            claude: components["schemas"]["ClaudeAgent"][];
         };
         /** @description One allowlist entry: a unit and the verbs permitted on it. */
         AllowRule: {
@@ -640,6 +642,29 @@ export interface components {
             ceremony_id: string;
             /** @description The `PublicKeyCredentialCreationOptions` or request options. */
             options: Record<string, never>;
+        };
+        /** @description One Claude Code session, as the agents page sees it. */
+        ClaudeAgent: {
+            /** @description Agent name when the session runs an agent. */
+            agent?: string | null;
+            /** @description Human-readable session name, when set. */
+            name?: string | null;
+            /** @description Session id, used to locate the transcript. */
+            sessionId: string;
+            status?: components["schemas"]["SessionStatus"] | null;
+            /** @description herdr-core terminal the session runs in, from its environment. */
+            terminal?: string | null;
+            /**
+             * Format: int64
+             * @description Last update time in Unix milliseconds.
+             */
+            updatedAt?: number | null;
+            /** @description Token totals and the estimated cost. */
+            usage: components["schemas"]["SessionUsage"];
+            /** @description Claude Code version reported by the session. */
+            version?: string | null;
+            /** @description What a waiting session is waiting for, when reported. */
+            waitingFor?: string | null;
         };
         /**
          * @description One container action.
@@ -972,6 +997,18 @@ export interface components {
             /** @description Disk write rate in bytes per second. */
             write_bytes_per_sec: components["schemas"]["Stat"];
         };
+        /** @description Token usage and estimated cost for one model. */
+        ModelUsage: {
+            /**
+             * Format: double
+             * @description Estimated cost, or `None` when the model is absent from the price table.
+             */
+            costUsd?: number | null;
+            /** @description Model id exactly as written in the transcript. */
+            model: string;
+            /** @description Tokens attributed to this model. */
+            tokens: components["schemas"]["TokenUsage"];
+        };
         /** @description A network interface with its traffic rates. */
         NetworkInterface: {
             /** @description Interface name, for example `eth0`. */
@@ -1131,6 +1168,26 @@ export interface components {
         SessionResponse: {
             /** @description Always true; present so the body is never empty. */
             authenticated: boolean;
+        };
+        /** @description Session state. Unknown values are preserved verbatim rather than mapped. */
+        SessionStatus: string;
+        /** @description Token usage and estimated cost for one session. */
+        SessionUsage: {
+            /**
+             * Format: double
+             * @description Sum of priced models. Unpriced models contribute nothing.
+             */
+            costUsd: number;
+            /** @description Number of distinct assistant responses counted. */
+            messages: number;
+            /** @description Per-model usage, sorted by model id. */
+            models: components["schemas"]["ModelUsage"][];
+            /** @description Session the usage belongs to. */
+            sessionId: string;
+            /** @description Sum across all models. */
+            tokens: components["schemas"]["TokenUsage"];
+            /** @description Models that could not be priced, sorted. */
+            unpricedModels: string[];
         };
         /** @description Sets the owner password during setup. */
         SetupPasswordRequest: {
@@ -1300,6 +1357,29 @@ export interface components {
         TokenQuery: {
             /** @description The single-use setup token. */
             token: string;
+        };
+        /** @description Token counts for one model or one session. */
+        TokenUsage: {
+            /**
+             * Format: int64
+             * @description Input tokens written to the prompt cache.
+             */
+            cacheCreationInputTokens: number;
+            /**
+             * Format: int64
+             * @description Input tokens read from the prompt cache.
+             */
+            cacheReadInputTokens: number;
+            /**
+             * Format: int64
+             * @description Uncached input tokens.
+             */
+            inputTokens: number;
+            /**
+             * Format: int64
+             * @description Output tokens.
+             */
+            outputTokens: number;
         };
         /**
          * @description A mutating action on a unit.

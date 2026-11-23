@@ -20,6 +20,7 @@ use dandelion_server::{
         session::now_millis,
         token::{hash_token, random_token},
     },
+    claude::ClaudeMonitor,
     containers::Containers,
     metrics::Metrics,
     services::Services,
@@ -57,6 +58,7 @@ async fn test_state() -> AppState {
         Services::disabled(),
         Containers::disabled(),
         Agents::disabled(),
+        ClaudeMonitor::disabled(),
     )
 }
 

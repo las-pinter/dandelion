@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { AgentsState } from '@/hooks/use-agents'
-import type { AgentAction, AgentInfo, AgentsSnapshot } from '@/lib/agents'
+import type { AgentAction, AgentInfo, AgentsSnapshot, ClaudeAgent } from '@/lib/agents'
 import { AgentsPage, page } from './page'
 
 const { useAgents } = vi.hoisted(() => ({
@@ -38,6 +38,31 @@ const snapshot: AgentsSnapshot = {
     detail: null,
   },
   agents: [agent],
+  claude: [],
+}
+
+const claude: ClaudeAgent = {
+  terminal: 't7',
+  sessionId: '0f3c2b1a-aaaa-bbbb-cccc-0123456789ab',
+  name: 'dandelion-a6',
+  agent: null,
+  version: '2.1.330',
+  status: 'waiting',
+  waitingFor: 'permission prompt',
+  updatedAt: 1795372085544,
+  usage: {
+    sessionId: '0f3c2b1a-aaaa-bbbb-cccc-0123456789ab',
+    models: [],
+    tokens: {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadInputTokens: 0,
+      cacheCreationInputTokens: 0,
+    },
+    costUsd: 0,
+    unpricedModels: [],
+    messages: 0,
+  },
 }
 
 function state(overrides: Partial<AgentsState> = {}): AgentsState {
@@ -66,6 +91,15 @@ describe('AgentsPage', () => {
     )
   })
 
+  it('matches the selected agent to its Claude session', () => {
+    useAgents.mockReturnValue(state({ snapshot: { ...snapshot, claude: [claude] } }))
+
+    render(<AgentsPage />)
+
+    expect(screen.getByText('Claude session')).toBeInTheDocument()
+    expect(screen.getByText('0f3c2b1a')).toBeInTheDocument()
+  })
+
   it('runs an action on the selected agent', async () => {
     const user = userEvent.setup()
     const act = vi.fn<(terminal: string, action: AgentAction) => Promise<void>>()
@@ -91,6 +125,7 @@ describe('AgentsPage', () => {
             detail: 'no socket',
           },
           agents: [],
+          claude: [],
         },
       }),
     )

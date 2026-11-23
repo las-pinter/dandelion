@@ -78,6 +78,11 @@ use crate::auth::routes::{
         crate::terminal::ShellInfo,
         crate::terminal::OpenTerminalRequest,
         crate::agents::AgentsSnapshot,
+        crate::claude::ClaudeAgent,
+        dandelion_claude::SessionStatus,
+        dandelion_claude::SessionUsage,
+        dandelion_claude::ModelUsage,
+        dandelion_claude::TokenUsage,
         crate::agents::AgentAction,
         crate::agents::AgentActionRequest,
         crate::agents::SpawnAgentRequest,
@@ -239,6 +244,10 @@ mod tests {
         assert!(
             document["components"]["schemas"]["AgentsSnapshot"].is_object(),
             "missing AgentsSnapshot"
+        );
+        assert!(
+            document["components"]["schemas"]["ClaudeAgent"].is_object(),
+            "missing ClaudeAgent"
         );
     }
 

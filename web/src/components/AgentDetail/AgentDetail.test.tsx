@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentAction, AgentInfo } from '@/lib/agents'
+import type { AgentAction, AgentInfo, ClaudeAgent } from '@/lib/agents'
 import { AgentDetail } from './AgentDetail'
 
 vi.mock('@/components/XtermPane/XtermPane', () => ({
@@ -36,9 +36,44 @@ const blocked: AgentInfo = {
   finished_reason: null,
 }
 
-function setup(agent: AgentInfo = blocked) {
+const claude: ClaudeAgent = {
+  terminal: 't7',
+  sessionId: '0f3c2b1a-aaaa-bbbb-cccc-0123456789ab',
+  name: 'dandelion-a6',
+  agent: null,
+  version: '2.1.330',
+  status: 'waiting',
+  waitingFor: 'permission prompt',
+  updatedAt: 1795372085544,
+  usage: {
+    sessionId: '0f3c2b1a-aaaa-bbbb-cccc-0123456789ab',
+    models: [
+      {
+        model: 'claude-opus-5-5',
+        tokens: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
+        },
+        costUsd: 0.42,
+      },
+    ],
+    tokens: {
+      inputTokens: 96,
+      outputTokens: 39_430,
+      cacheReadInputTokens: 3_233_619,
+      cacheCreationInputTokens: 129_107,
+    },
+    costUsd: 0.42,
+    unpricedModels: [],
+    messages: 41,
+  },
+}
+
+function setup(agent: AgentInfo = blocked, session: ClaudeAgent | null = null) {
   const onAct = vi.fn<(action: AgentAction) => void>()
-  render(<AgentDetail agent={agent} onAct={onAct} />)
+  render(<AgentDetail agent={agent} claude={session} onAct={onAct} />)
   return { onAct }
 }
 
@@ -50,6 +85,17 @@ describe('AgentDetail', () => {
     expect(pane).toHaveTextContent('ws://localhost:3000/api/agents/t7/ws')
     expect(pane).toHaveAttribute('data-readonly', 'true')
     expect(screen.getByText('needs permission')).toBeInTheDocument()
+  })
+
+  it('shows the Claude session, model, tokens and cost', () => {
+    setup(blocked, claude)
+
+    expect(screen.getByText('Claude session')).toBeInTheDocument()
+    expect(screen.getByText('0f3c2b1a')).toBeInTheDocument()
+    expect(screen.getByText('claude-opus-5-5')).toBeInTheDocument()
+    expect(screen.getByText('3.4M')).toBeInTheDocument()
+    expect(screen.getByText('~$0.42')).toBeInTheDocument()
+    expect(screen.getByText('a permission prompt')).toBeInTheDocument()
   })
 
   it('says why the pane could not attach', async () => {

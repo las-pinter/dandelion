@@ -19,6 +19,7 @@ use dandelion_server::{
         store::AuthStore,
         token::{hash_token, random_token},
     },
+    claude::ClaudeMonitor,
     config::{self, BindAddr},
     containers::Containers,
     metrics::{self, Metrics},
@@ -182,6 +183,8 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     let services = Services::connect(allowlist).await;
     let containers = Containers::connect();
     let agents = Agents::connect().await;
+    let claude = ClaudeMonitor::from_home();
+    tracing::info!(enabled = claude.is_enabled(), "Claude Code session monitor");
 
     let state = AppState::new(
         audit,
@@ -191,9 +194,11 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         services,
         containers,
         agents,
+        claude,
     );
     metrics::collector::spawn(state.clone());
     agents::spawn_publisher(state.clone());
+    dandelion_server::claude::spawn_monitor(state.clone());
     serve(bind, state).await
 }
 

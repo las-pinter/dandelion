@@ -24,6 +24,7 @@ use dandelion_server::{
         session::now_millis,
         token::{hash_token, random_token},
     },
+    claude::ClaudeMonitor,
     containers::Containers,
     metrics::Metrics,
     services::Services,
@@ -48,6 +49,10 @@ const WAIT: Duration = Duration::from_secs(5);
 type Client = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 async fn state_with(agents: Agents) -> AppState {
+    state_with_claude(agents, ClaudeMonitor::disabled()).await
+}
+
+async fn state_with_claude(agents: Agents, claude: ClaudeMonitor) -> AppState {
     let pool = storage::open_in_memory().await.expect("in-memory database");
     let origin = PublicOrigin::parse(ORIGIN).expect("test origin");
     let auth = Auth::new(pool.clone(), origin).expect("auth services");
@@ -60,6 +65,7 @@ async fn state_with(agents: Agents) -> AppState {
         Services::disabled(),
         Containers::disabled(),
         agents,
+        claude,
     )
 }
 
@@ -214,6 +220,35 @@ async fn the_snapshot_lists_agents() {
         body["agents"][0]["agent_state"]["blocked_reason"],
         "permission"
     );
+}
+
+#[tokio::test]
+async fn the_snapshot_carries_the_claude_session() {
+    let fixture = fake::claude_fixture();
+    assert!(fixture.monitor.refresh(), "the fixture session is found");
+    let state = state_with_claude(Agents::disabled(), fixture.monitor.clone()).await;
+    let cookie = session_cookie(&state).await;
+
+    let response = send(
+        &state,
+        Method::GET,
+        "/api/agents",
+        None,
+        Some(&cookie),
+        None,
+    )
+    .await;
+    let status = response.status();
+    let body = json_body(response).await;
+
+    assert_eq!(status, StatusCode::OK);
+    let session = &body["claude"][0];
+    assert_eq!(session["terminal"], TERMINAL);
+    assert_eq!(session["sessionId"], "session-424242");
+    assert_eq!(session["status"], "waiting");
+    assert_eq!(session["waitingFor"], "permission prompt");
+    assert_eq!(session["usage"]["tokens"]["inputTokens"], 10);
+    assert_eq!(session["usage"]["messages"], 1);
 }
 
 #[tokio::test]

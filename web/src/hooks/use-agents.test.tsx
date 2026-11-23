@@ -70,6 +70,7 @@ const snapshot: AgentsSnapshot = {
     detail: null,
   },
   agents: [agent],
+  claude: [],
 }
 
 beforeEach(() => {

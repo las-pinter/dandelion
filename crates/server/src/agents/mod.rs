@@ -24,6 +24,8 @@ use dandelion_terminals::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::claude::ClaudeAgent;
+
 /// The hub topic carrying agent state changes.
 pub const TOPIC: &str = "agents";
 /// History lines a new attach asks for.
@@ -35,6 +37,17 @@ const ATTACH_SIZE: TerminalSize = TerminalSize {
     rows: 40,
 };
 
+/// What the terminal backend reports for the Agents page.
+#[derive(Debug, Clone, Serialize)]
+pub struct AgentsListing {
+    /// Whether a backend answered.
+    pub available: bool,
+    /// The backend and its version, when one answered.
+    pub backend: Option<BackendDescriptor>,
+    /// Every live terminal that reports an agent.
+    pub agents: Vec<TerminalInfo>,
+}
+
 /// What the Agents page needs in one response.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct AgentsSnapshot {
@@ -44,6 +57,24 @@ pub struct AgentsSnapshot {
     pub backend: Option<BackendDescriptor>,
     /// Every live terminal that reports an agent.
     pub agents: Vec<TerminalInfo>,
+    /// Claude Code sessions, when that state directory is readable.
+    pub claude: Vec<ClaudeAgent>,
+}
+
+impl AgentsSnapshot {
+    /// Combines the backend listing and the Claude cache.
+    ///
+    /// This is the only constructor, so a snapshot cannot leave `claude`
+    /// looking complete when it was never filled.
+    #[must_use]
+    pub fn compose(listing: AgentsListing, claude: Vec<ClaudeAgent>) -> Self {
+        Self {
+            available: listing.available,
+            backend: listing.backend,
+            agents: listing.agents,
+            claude,
+        }
+    }
 }
 
 /// A request to act on one agent's terminal.
@@ -174,15 +205,15 @@ impl Agents {
 
     /// Every live terminal with an agent, plus the backend's descriptor.
     ///
-    /// Without a backend the snapshot reports `available: false` rather than
+    /// Without a backend the listing reports `available: false` rather than
     /// failing, so the page still renders.
     ///
     /// # Errors
     ///
     /// Returns the backend's error when the listing fails.
-    pub async fn snapshot(&self) -> Result<AgentsSnapshot, AgentsError> {
+    pub async fn snapshot(&self) -> Result<AgentsListing, AgentsError> {
         let Some(backend) = self.backend.as_ref() else {
-            return Ok(AgentsSnapshot {
+            return Ok(AgentsListing {
                 available: false,
                 backend: None,
                 agents: Vec::new(),
@@ -190,7 +221,7 @@ impl Agents {
         };
         let descriptor = backend.detect().await;
         if !descriptor.available {
-            return Ok(AgentsSnapshot {
+            return Ok(AgentsListing {
                 available: false,
                 backend: Some(descriptor),
                 agents: Vec::new(),
@@ -202,7 +233,7 @@ impl Agents {
             .filter(|terminal| terminal.agent_kind.is_some())
             .collect();
         agents.sort_by(|left, right| left.id.cmp(&right.id));
-        Ok(AgentsSnapshot {
+        Ok(AgentsListing {
             available: true,
             backend: Some(descriptor),
             agents,

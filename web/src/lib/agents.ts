@@ -8,6 +8,7 @@ export type AgentStatusInfo = components['schemas']['AgentStatus']
 export type BlockedReason = components['schemas']['BlockedReason']
 export type AgentAction = components['schemas']['AgentAction']
 export type SpawnAgentRequest = components['schemas']['SpawnAgentRequest']
+export type ClaudeAgent = components['schemas']['ClaudeAgent']
 
 /** The pane socket for one agent on this origin. */
 export function agentSocketUrl(id: string): string {
@@ -35,6 +36,70 @@ export function uiStatus(agent: AgentInfo): UiStatus {
       return 'error'
     default:
       return 'idle'
+  }
+}
+
+/** The Claude Code session behind a terminal, when the monitor knows one. */
+export function claudeFor(
+  sessions: ClaudeAgent[] | undefined,
+  terminal: string | null | undefined,
+): ClaudeAgent | null {
+  if (!terminal) return null
+  return sessions?.find((session) => session.terminal === terminal) ?? null
+}
+
+/** A compact token count: 950, 12.3k, 4.5M. */
+export function formatTokens(count: number): string {
+  // Round up a step early where `toFixed(1)` would print 1000.0k.
+  if (count >= 999_950) return `${(count / 1_000_000).toFixed(1)}M`
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`
+  return `${count}`
+}
+
+export interface ClaudeSummary {
+  /** The full session id; the card truncates it for display. */
+  sessionId: string
+  /** The first model in the usage list, or `unknown`. */
+  model: string
+  /** All token classes, compacted. */
+  tokens: string
+  /** Estimated cost; `—` before the first response, `unpriced` without a price. */
+  cost: string
+  /** What the session waits for, when it is blocked. */
+  waiting: string | null
+}
+
+/** Display strings for one Claude session's card. */
+export function claudeSummary(session: ClaudeAgent): ClaudeSummary {
+  const { tokens, messages, costUsd, models, unpricedModels } = session.usage
+  const total =
+    tokens.inputTokens +
+    tokens.outputTokens +
+    tokens.cacheReadInputTokens +
+    tokens.cacheCreationInputTokens
+  const priced = models.some((model) => model.costUsd != null)
+  const partial = unpricedModels.length > 0 || models.some((model) => model.costUsd == null)
+
+  return {
+    sessionId: session.sessionId,
+    model: models[0]?.model ?? 'unknown',
+    tokens: formatTokens(total),
+    cost:
+      messages === 0 ? '—' : priced ? `~$${costUsd.toFixed(2)}${partial ? '+' : ''}` : 'unpriced',
+    waiting: waitingLabel(session.waitingFor),
+  }
+}
+
+function waitingLabel(waitingFor: string | null | undefined): string | null {
+  switch (waitingFor) {
+    case 'permission prompt':
+      return 'a permission prompt'
+    case 'input needed':
+      return 'input'
+    case 'dialog open':
+      return 'an open dialog'
+    default:
+      return waitingFor ?? null
   }
 }
 

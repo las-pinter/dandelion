@@ -16,26 +16,31 @@ import {
   agentLabel,
   agentSocketUrl,
   blockedLabel,
+  claudeSummary,
   uiStatus,
   type AgentAction,
   type AgentInfo,
+  type ClaudeAgent,
 } from '@/lib/agents'
 
 export interface AgentDetailProps {
   agent: AgentInfo
+  /** The Claude Code session behind this terminal, when one was found. */
+  claude?: ClaudeAgent | null
   /** The action in flight, as `terminal:kind`. */
   busy?: string | null
   onAct: (action: AgentAction) => void
 }
 
 /** One agent: its live pane, the prompt box, and the control buttons. */
-export function AgentDetail({ agent, busy, onAct }: AgentDetailProps) {
+export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
   const [prompt, setPrompt] = useState('')
   const [confirmKill, setConfirmKill] = useState(false)
   const [paneError, setPaneError] = useState<string | null>(null)
   const promptId = useId()
   const status = uiStatus(agent)
   const blocked = blockedLabel(agent.agent_state)
+  const session = claude ? claudeSummary(claude) : null
   const inFlight = (kind: string) => busy === `${agent.id}:${kind}`
 
   const send = () => {
@@ -54,6 +59,34 @@ export function AgentDetail({ agent, busy, onAct }: AgentDetailProps) {
       <p className="mb-3 text-xs text-muted-foreground" aria-live="polite">
         {blocked ?? 'Nothing is waiting on you.'}
       </p>
+      {session && (
+        <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg border border-dashed p-3 text-xs sm:grid-cols-4">
+          <div className="min-w-0">
+            <dt className="text-muted-foreground">Claude session</dt>
+            <dd className="truncate font-mono" title={session.sessionId}>
+              {session.sessionId.slice(0, 8)}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-muted-foreground">Model</dt>
+            <dd className="truncate">{session.model}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Tokens</dt>
+            <dd className="tabular-nums">{session.tokens}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Est. cost</dt>
+            <dd className="tabular-nums">{session.cost}</dd>
+          </div>
+          {session.waiting && (
+            <div className="col-span-2 sm:col-span-4">
+              <dt className="text-muted-foreground">Waiting for</dt>
+              <dd>{session.waiting}</dd>
+            </div>
+          )}
+        </dl>
+      )}
       <div className="mb-3 flex flex-wrap gap-1">
         <Button
           size="xs"

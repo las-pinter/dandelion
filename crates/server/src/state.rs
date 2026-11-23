@@ -3,12 +3,12 @@
 use std::sync::Arc;
 
 use crate::{
-    agents::Agents, audit::AuditLog, auth::Auth, containers::Containers, metrics::Metrics,
-    services::Services, terminal::Terminals, ws::hub::Hub,
+    agents::Agents, audit::AuditLog, auth::Auth, claude::ClaudeMonitor, containers::Containers,
+    metrics::Metrics, services::Services, terminal::Terminals, ws::hub::Hub,
 };
 
 /// Handlers share the audit log, authentication, the hub, live metrics,
-/// systemd access, and Docker access.
+/// systemd access, Docker access, and the Claude Code session cache.
 #[derive(Debug, Clone)]
 pub struct AppState {
     /// Append-only log for control actions.
@@ -27,11 +27,16 @@ pub struct AppState {
     pub terminals: Terminals,
     /// The herdr backend that lists and drives agents.
     pub agents: Agents,
+    /// Claude Code sessions, their tokens, and what they wait for.
+    pub claude: ClaudeMonitor,
 }
 
 impl AppState {
     /// Builds the shared state.
+    // The composition root lists every service; grouping them into a struct
+    // would only move the same arguments to another type.
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         audit: AuditLog,
         auth: Auth,
@@ -40,6 +45,7 @@ impl AppState {
         services: Services,
         containers: Containers,
         agents: Agents,
+        claude: ClaudeMonitor,
     ) -> Self {
         Self {
             audit,
@@ -50,6 +56,7 @@ impl AppState {
             containers,
             terminals: Terminals::default(),
             agents,
+            claude,
         }
     }
 

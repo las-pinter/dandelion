@@ -7,13 +7,14 @@ import { Panel } from '@/components/Panel/Panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAgents } from '@/hooks/use-agents'
-import type { AgentAction } from '@/lib/agents'
+import { claudeFor, type AgentAction } from '@/lib/agents'
 
 export function AgentsPage() {
   const { snapshot, loading, error, busy, refresh, act, spawn } = useAgents()
   const agents = snapshot?.agents ?? []
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null
+  const claude = claudeFor(snapshot?.claude, selected?.id)
 
   const [line, setLine] = useState('claude')
   const [cwd, setCwd] = useState('')
@@ -68,7 +69,13 @@ export function AgentsPage() {
       </Panel>
 
       {selected && (
-        <AgentDetail key={selected.id} agent={selected} busy={busy} onAct={actOnSelected} />
+        <AgentDetail
+          key={selected.id}
+          agent={selected}
+          claude={claude}
+          busy={busy}
+          onAct={actOnSelected}
+        />
       )}
 
       <Panel

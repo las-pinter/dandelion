@@ -12,6 +12,8 @@ use std::{
 };
 
 use async_trait::async_trait;
+use dandelion_claude::ClaudePaths;
+use dandelion_server::claude::ClaudeMonitor;
 use dandelion_terminals::{
     Access, AgentKind, AgentState, AgentStatus, AttachCommand, AttachEvent, AttachMode,
     AttachOptions, AttachSession, BackendDescriptor, BackendKind, BlockedReason, EventStream,
@@ -24,6 +26,57 @@ use tokio::sync::mpsc;
 pub const ORIGIN: &str = "https://example.test";
 pub const COOKIE: &str = "__Host-dandelion_session";
 pub const TERMINAL: &str = "t7";
+
+/// A synthetic Claude state directory with one waiting session in `t7`.
+pub struct ClaudeFixture {
+    /// Keeps the directory alive for the monitor's lifetime.
+    _directory: tempfile::TempDir,
+    pub monitor: ClaudeMonitor,
+}
+
+pub fn claude_fixture() -> ClaudeFixture {
+    use std::fs;
+
+    let temporary = tempfile::tempdir().expect("temp dir");
+    let claude_dir = temporary.path().join("claude");
+    fs::create_dir_all(claude_dir.join("sessions")).expect("sessions dir");
+    fs::write(
+        claude_dir.join("sessions").join("424242.json"),
+        r#"{"pid":424242,"sessionId":"session-424242","cwd":"/work/example","procStart":"7001","version":"9.9.9","name":"example-session","agent":"example-agent","status":"waiting","waitingFor":"permission prompt","updatedAt":1795372085544}"#,
+    )
+    .expect("session record");
+
+    let project = claude_dir.join("projects").join("-work-example");
+    fs::create_dir_all(&project).expect("project dir");
+    fs::write(
+        project.join("session-424242.jsonl"),
+        concat!(
+            r#"{"type":"assistant","message":{"id":"msg_1","model":"claude-opus-5-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":100,"cache_creation_input_tokens":2}}}"#,
+            "\n"
+        ),
+    )
+    .expect("transcript");
+
+    let proc_root = temporary.path().join("proc");
+    let proc_dir = proc_root.join("424242");
+    fs::create_dir_all(&proc_dir).expect("proc dir");
+    fs::write(
+        proc_dir.join("stat"),
+        "424242 (claude) R 1 424242 424242 0 -1 4194304 100 0 0 0 1 2 0 0 20 0 5 0 7001 100000 123",
+    )
+    .expect("proc stat");
+    fs::write(
+        proc_dir.join("environ"),
+        b"PATH=/usr/bin\0HC_TERMINAL_ID=t7\0",
+    )
+    .expect("environ");
+
+    let paths = ClaudePaths::new(&claude_dir).with_proc_root(&proc_root);
+    ClaudeFixture {
+        _directory: temporary,
+        monitor: ClaudeMonitor::from_paths(paths),
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Behaviour {
