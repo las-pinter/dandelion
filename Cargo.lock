@@ -763,6 +763,7 @@ dependencies = [
  "clap",
  "dandelion-core",
  "dandelion-sysmon",
+ "dandelion-system",
  "futures-util",
  "getrandom 0.4.3",
  "http-body-util",

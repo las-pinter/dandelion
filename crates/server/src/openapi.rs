@@ -29,6 +29,9 @@ use crate::auth::routes::{
         crate::auth::routes::logout_all,
         crate::metrics::routes::latest,
         crate::metrics::routes::history,
+        crate::processes::list,
+        crate::processes::signal,
+        crate::processes::renice,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -38,6 +41,11 @@ use crate::auth::routes::{
         dandelion_sysmon::MetricsPoint,
         dandelion_sysmon::MinuteAggregate,
         dandelion_sysmon::HistorySnapshot,
+        dandelion_system::process::ProcessInfo,
+        dandelion_system::process::ProcessState,
+        dandelion_system::process::ProcessSignal,
+        dandelion_system::process::SignalRequest,
+        dandelion_system::process::ReniceRequest,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -81,6 +89,23 @@ mod tests {
             assert!(document["paths"][path].is_object(), "missing {path}");
         }
         assert!(document["components"]["schemas"]["Snapshot"].is_object());
+    }
+
+    #[test]
+    fn document_lists_the_process_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in [
+            "/api/processes",
+            "/api/processes/signal",
+            "/api/processes/renice",
+        ] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["ProcessInfo"].is_object(),
+            "missing ProcessInfo"
+        );
     }
 
     #[test]

@@ -225,6 +225,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/processes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists every readable process, sorted by pid. */
+        get: operations["list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/processes/renice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Changes a process's nice value. */
+        post: operations["renice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/processes/signal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sends one supported signal to a process. */
+        post: operations["signal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/history": {
         parameters: {
             query?: never;
@@ -553,6 +604,71 @@ export interface components {
              */
             pid: number;
         };
+        /** @description A process as shown in the process table. */
+        ProcessInfo: {
+            /** @description Full command line, or the executable name when it has no arguments. */
+            command: string;
+            /**
+             * Format: double
+             * @description Total CPU time consumed since start, in seconds.
+             */
+            cpu_seconds: number;
+            /**
+             * Format: int64
+             * @description Resident memory in bytes.
+             */
+            memory_bytes: number;
+            /** @description Executable name from `/proc/<pid>/stat`. */
+            name: string;
+            /**
+             * Format: int32
+             * @description Nice value between -20 and 19.
+             */
+            niceness: number;
+            /**
+             * Format: int32
+             * @description Parent process id, absent for kernel threads and init.
+             */
+            parent_pid?: number | null;
+            /**
+             * Format: int32
+             * @description Process id.
+             */
+            pid: number;
+            /**
+             * Format: int64
+             * @description Process start time as a Unix timestamp in seconds.
+             */
+            started_at_unix?: number | null;
+            /** @description Scheduling state. */
+            state: components["schemas"]["ProcessState"];
+            /** @description Owning user name, or the numeric uid when it has no passwd entry. */
+            user: string;
+        };
+        /**
+         * @description A signal this crate is allowed to send.
+         * @enum {string}
+         */
+        ProcessSignal: "term" | "kill" | "int" | "stop" | "cont";
+        /**
+         * @description Scheduling state of a process.
+         * @enum {string}
+         */
+        ProcessState: "running" | "sleeping" | "disk_sleep" | "stopped" | "tracing_stop" | "zombie" | "idle" | "dead" | "unknown";
+        /** @description A request to change a process's nice value. */
+        ReniceRequest: {
+            /**
+             * Format: int32
+             * @description Target process id. Must be greater than 1.
+             */
+            pid: number;
+            /**
+             * Format: int32
+             * @description New nice value, between -20 and 19. Raising the priority (a smaller
+             *     number) needs `CAP_SYS_NICE`.
+             */
+            priority: number;
+        };
         /** @description A successful session start. */
         SessionResponse: {
             /** @description Always true; present so the body is never empty. */
@@ -578,6 +694,16 @@ export interface components {
         SetupTokenRequest: {
             /** @description The single-use setup token. */
             token: string;
+        };
+        /** @description A request to signal a process. */
+        SignalRequest: {
+            /**
+             * Format: int32
+             * @description Target process id. Must be greater than 1.
+             */
+            pid: number;
+            /** @description Signal to send. */
+            signal: components["schemas"]["ProcessSignal"];
         };
         /** @description One complete observation of the machine. */
         Snapshot: {
@@ -1016,6 +1142,151 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every readable process */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessInfo"][];
+                };
+            };
+            /** @description The process table could not be read */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    renice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReniceRequest"];
+            };
+        };
+        responses: {
+            /** @description Nice value changed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The pid or nice value is not allowed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The process belongs to another user */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The process does not exist */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The renice failed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    signal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalRequest"];
+            };
+        };
+        responses: {
+            /** @description Signal sent */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The pid or signal is not allowed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The process belongs to another user */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The process does not exist */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The signal failed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };
