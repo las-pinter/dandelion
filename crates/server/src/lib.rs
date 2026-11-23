@@ -11,6 +11,7 @@ pub mod health;
 pub mod metrics;
 pub mod openapi;
 pub mod processes;
+pub mod services;
 pub mod shutdown;
 pub mod state;
 pub mod static_files;

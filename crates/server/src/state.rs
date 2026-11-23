@@ -1,8 +1,11 @@
 //! State shared by HTTP handlers.
 
-use crate::{audit::AuditLog, auth::Auth, metrics::Metrics, ws::hub::Hub};
+use std::sync::Arc;
 
-/// Handlers share the audit log, authentication, the hub, and live metrics.
+use crate::{audit::AuditLog, auth::Auth, metrics::Metrics, services::Services, ws::hub::Hub};
+
+/// Handlers share the audit log, authentication, the hub, live metrics, and
+/// systemd access.
 #[derive(Debug, Clone)]
 pub struct AppState {
     /// Append-only log for control actions.
@@ -13,17 +16,26 @@ pub struct AppState {
     pub hub: Hub,
     /// System metrics, persistence, and the latest snapshot.
     pub metrics: Metrics,
+    /// systemd access and the root-action allowlist.
+    pub services: Arc<Services>,
 }
 
 impl AppState {
     /// Builds the shared state.
     #[must_use]
-    pub const fn new(audit: AuditLog, auth: Auth, hub: Hub, metrics: Metrics) -> Self {
+    pub fn new(
+        audit: AuditLog,
+        auth: Auth,
+        hub: Hub,
+        metrics: Metrics,
+        services: Services,
+    ) -> Self {
         Self {
             audit,
             auth,
             hub,
             metrics,
+            services: Arc::new(services),
         }
     }
 }

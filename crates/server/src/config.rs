@@ -129,6 +129,12 @@ pub fn database_path(data_dir: &Path) -> PathBuf {
     data_dir.join("dandelion.db")
 }
 
+/// The optional system-unit allowlist inside the data directory.
+#[must_use]
+pub fn allowlist_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("sudo-allowlist.toml")
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -136,7 +142,9 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use super::{BindAddr, BindError, DataDirError, choose_data_dir, database_path};
+    use super::{
+        BindAddr, BindError, DataDirError, allowlist_path, choose_data_dir, database_path,
+    };
 
     fn parse(raw: &str) -> Result<BindAddr, BindError> {
         raw.parse()
@@ -254,6 +262,14 @@ mod tests {
         assert_eq!(
             database_path(Path::new("/var/lib/dandelion")),
             PathBuf::from("/var/lib/dandelion/dandelion.db")
+        );
+    }
+
+    #[test]
+    fn allowlist_path_sits_beside_the_database() {
+        assert_eq!(
+            allowlist_path(Path::new("/var/lib/dandelion")),
+            PathBuf::from("/var/lib/dandelion/sudo-allowlist.toml")
         );
     }
 }

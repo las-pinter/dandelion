@@ -276,6 +276,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every unit both managers report, with the allowlist rules. */
+        get: operations["snapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/services/action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sends one mutating action to a unit. */
+        post: operations["action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/services/{scope}/{unit}/journal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads the newest journal entries for one unit. */
+        get: operations["journal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/history": {
         parameters: {
             query?: never;
@@ -314,6 +365,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description How an action reached systemd.
+         * @enum {string}
+         */
+        ActionMechanism: "dbus" | "sudo";
+        /** @description One allowlist entry: a unit and the verbs permitted on it. */
+        AllowRule: {
+            /** @description Full unit name. */
+            unit: string;
+            /** @description Actions permitted on the unit. */
+            verbs: components["schemas"]["UnitAction"][];
+        };
         /** @description Error body returned by API routes. */
         ApiError: {
             /** @description Stable machine-readable code. */
@@ -417,6 +480,30 @@ export interface components {
             minutes: components["schemas"]["MinuteAggregate"][];
             /** @description Second-resolution points. */
             seconds: components["schemas"]["MetricsPoint"][];
+        };
+        /** @description One journal record, reduced to the fields the UI shows. */
+        JournalEntry: {
+            /** @description Syslog identifier, or the command name when it has none. */
+            identifier?: string | null;
+            /** @description Log message, with invalid UTF-8 replaced. */
+            message: string;
+            /**
+             * Format: int32
+             * @description Process id of the writer, when known.
+             */
+            pid?: number | null;
+            /**
+             * Format: int32
+             * @description Syslog severity, 0 (emergency) to 7 (debug).
+             */
+            priority?: number | null;
+            /**
+             * Format: int64
+             * @description Record time as microseconds since the Unix epoch.
+             */
+            timestamp_usec?: number | null;
+            /** @description The unit that wrote the record, when it has one. */
+            unit?: string | null;
         };
         /**
          * @description One live sample: the full observation and its compact history point.
@@ -669,6 +756,13 @@ export interface components {
              */
             priority: number;
         };
+        /** @description What the services page needs in one response. */
+        ServicesSnapshot: {
+            /** @description The system-scope rules the sudo allowlist permits. */
+            allowlist: components["schemas"]["AllowRule"][];
+            /** @description Every unit both managers report. */
+            units: components["schemas"]["UnitInfo"][];
+        };
         /** @description A successful session start. */
         SessionResponse: {
             /** @description Always true; present so the body is never empty. */
@@ -762,6 +856,51 @@ export interface components {
             /** @description The single-use setup token. */
             token: string;
         };
+        /**
+         * @description A mutating action on a unit.
+         * @enum {string}
+         */
+        UnitAction: "start" | "stop" | "restart" | "enable" | "disable";
+        /** @description A typed request for a mutating unit action. The server audits this value. */
+        UnitActionRequest: {
+            /** @description The action to perform. */
+            action: components["schemas"]["UnitAction"];
+            /** @description The manager that owns the unit. */
+            scope: components["schemas"]["UnitScope"];
+            /** @description Full unit name. System scope also requires an allowlist entry. */
+            unit: string;
+        };
+        /** @description What a mutating unit action did. */
+        UnitActionResult: {
+            /** @description The action that ran. */
+            action: components["schemas"]["UnitAction"];
+            /** @description The path the action took. */
+            mechanism: components["schemas"]["ActionMechanism"];
+            /** @description The manager that owned the unit. */
+            scope: components["schemas"]["UnitScope"];
+            /** @description The unit name. */
+            unit: string;
+        };
+        /** @description A unit as listed by a manager. */
+        UnitInfo: {
+            /** @description Active state, such as `active` or `failed`. */
+            active_state: string;
+            /** @description Human-readable description. */
+            description: string;
+            /** @description Load state, such as `loaded` or `not-found`. */
+            load_state: string;
+            /** @description Full unit name, such as `nginx.service`. */
+            name: string;
+            /** @description The manager that reported the unit. */
+            scope: components["schemas"]["UnitScope"];
+            /** @description Sub state, such as `running` or `exited`. */
+            sub_state: string;
+        };
+        /**
+         * @description Which manager owns a unit: the user manager or the system manager.
+         * @enum {string}
+         */
+        UnitScope: "user" | "system";
     };
     responses: never;
     parameters: never;
@@ -1282,6 +1421,159 @@ export interface operations {
             };
             /** @description The signal failed */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    snapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Units and allowlist rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicesSnapshot"];
+                };
+            };
+            /** @description systemd did not answer */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description systemd is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The action ran */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitActionResult"];
+                };
+            };
+            /** @description The unit name is not valid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The allowlist or sudo refused the action */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description systemd or sudo failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description systemd or passwordless sudo is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    journal: {
+        parameters: {
+            query?: {
+                /** @description Number of newest entries to return (default 200, maximum 1000). */
+                lines?: number;
+            };
+            header?: never;
+            path: {
+                /** @description user or system */
+                scope: string;
+                /** @description full unit name */
+                unit: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Journal entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalEntry"][];
+                };
+            };
+            /** @description The scope or unit name is not valid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The journal could not be read */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description systemd is unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
