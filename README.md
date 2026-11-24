@@ -115,18 +115,6 @@ Enter and denial presses Escape. Starting an agent means
 running a command line in a directory, usually a worktree path; herdr-core has
 no workspace object of its own.
 
-## Notifications
-
-The dashboard has a Notifications panel that subscribes this browser to Web
-Push. The server creates a VAPID key on first start, stores one subscription
-per browser, and sends a notification when an agent starts waiting for a
-person or finishes, when a systemd unit fails, or when CPU, memory, or a disk
-stays at or above 90 % for two minutes. The body names the agent or unit, per
-the owner's choice; no conversation content is sent. A test message is
-available from the same panel. Back up `<data-dir>/vapid.json` together with
-the database: without it a restored server makes a new key and every stored
-subscription must be renewed. ADR-0004 records the design.
-
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
 

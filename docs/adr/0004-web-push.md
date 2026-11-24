@@ -1,6 +1,6 @@
 # 0004. Web push for notifications
 
-- **Status:** accepted
+- **Status:** superseded by [ADR-0005](0005-remove-web-push.md)
 - **Date:** 2026-11-24
 
 ## Context

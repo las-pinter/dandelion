@@ -45,10 +45,6 @@ use crate::auth::routes::{
         crate::agents::routes::action,
         crate::agents::routes::spawn,
         crate::agents::routes::screen,
-        crate::notifications::routes::key,
-        crate::notifications::routes::subscribe,
-        crate::notifications::routes::unsubscribe,
-        crate::notifications::routes::test,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -90,10 +86,6 @@ use crate::auth::routes::{
         crate::agents::AgentAction,
         crate::agents::AgentActionRequest,
         crate::agents::SpawnAgentRequest,
-        crate::notifications::routes::PushKeyResponse,
-        crate::notifications::routes::PushKeys,
-        crate::notifications::routes::PushSubscribeRequest,
-        crate::notifications::routes::PushUnsubscribeRequest,
         dandelion_terminals::AgentKind,
         dandelion_terminals::AgentState,
         dandelion_terminals::AgentStatus,
@@ -256,24 +248,6 @@ mod tests {
         assert!(
             document["components"]["schemas"]["ClaudeAgent"].is_object(),
             "missing ClaudeAgent"
-        );
-    }
-
-    #[test]
-    fn document_lists_the_notification_routes() {
-        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
-
-        for path in [
-            "/api/notifications/key",
-            "/api/notifications/subscribe",
-            "/api/notifications/unsubscribe",
-            "/api/notifications/test",
-        ] {
-            assert!(document["paths"][path].is_object(), "missing {path}");
-        }
-        assert!(
-            document["components"]["schemas"]["PushSubscribeRequest"].is_object(),
-            "missing PushSubscribeRequest"
         );
     }
 

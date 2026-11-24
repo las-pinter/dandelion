@@ -4,8 +4,7 @@ use std::sync::Arc;
 
 use crate::{
     agents::Agents, audit::AuditLog, auth::Auth, claude::ClaudeMonitor, containers::Containers,
-    metrics::Metrics, notifications::Notifications, services::Services, terminal::Terminals,
-    ws::hub::Hub,
+    metrics::Metrics, services::Services, terminal::Terminals, ws::hub::Hub,
 };
 
 /// Handlers share the audit log, authentication, the hub, live metrics,
@@ -30,8 +29,6 @@ pub struct AppState {
     pub agents: Agents,
     /// Claude Code sessions, their tokens, and what they wait for.
     pub claude: ClaudeMonitor,
-    /// Browser push subscriptions and delivery.
-    pub notifications: Notifications,
 }
 
 impl AppState {
@@ -49,7 +46,6 @@ impl AppState {
         containers: Containers,
         agents: Agents,
         claude: ClaudeMonitor,
-        notifications: Notifications,
     ) -> Self {
         Self {
             audit,
@@ -61,7 +57,6 @@ impl AppState {
             terminals: Terminals::default(),
             agents,
             claude,
-            notifications,
         }
     }
 
