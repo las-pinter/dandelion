@@ -266,8 +266,9 @@ pub struct FinishedData {
 pub struct EventParams {
     /// Global sequence.
     pub seq: u64,
-    /// The affected terminal.
-    pub terminal: String,
+    /// The affected terminal; absent on global events such as `doc`.
+    #[serde(default)]
+    pub terminal: Option<String>,
     /// Event type.
     #[serde(rename = "type")]
     pub kind: String,

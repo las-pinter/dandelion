@@ -6,7 +6,7 @@
 
 use std::time::Duration;
 
-use dandelion_terminals::{BackendEvent, TerminalFilter};
+use dandelion_terminals::{BackendEvent, TerminalError, TerminalFilter};
 use serde_json::json;
 
 use super::TOPIC;
@@ -42,6 +42,11 @@ pub fn spawn_publisher(state: AppState) {
                                 let _ = state.hub.publish(TOPIC, payload);
                             }
                             Ok(BackendEvent::Heartbeat { .. }) => {}
+                            // One event this build cannot read is skipped;
+                            // only a dead stream is worth reconnecting.
+                            Err(TerminalError::Json(error)) => {
+                                tracing::warn!(%error, "skipping an unreadable agent event");
+                            }
                             Err(error) => {
                                 tracing::warn!(%error, "agent event stream failed");
                                 break;
