@@ -8,9 +8,12 @@ use axum::{
     routing::post,
 };
 use dandelion_server::{
+    agents::Agents,
     app::{build_router, router_for_tests},
     audit::{AuditEntry, AuditLog},
     auth::{Auth, origin::PublicOrigin},
+    claude::ClaudeMonitor,
+    containers::Containers,
     metrics::Metrics,
     services::Services,
     state::AppState,
@@ -31,6 +34,9 @@ async fn test_state() -> AppState {
         Hub::default(),
         Metrics::new(pool),
         Services::disabled(),
+        Containers::disabled(),
+        Agents::disabled(),
+        ClaudeMonitor::disabled(),
     )
 }
 

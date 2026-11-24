@@ -88,6 +88,33 @@ install-sudoers --data-dir /path` reads a non-default data directory.
 drop-in, system-unit actions report that passwordless sudo is unavailable, and
 the refusal is audited.
 
+## Terminal
+
+The Terminal page opens a shell as the server account, one per terminal tab,
+rendered with xterm.js (loaded only when that page needs it). The shell runs on
+a real pseudo-terminal: raw bytes ride a dedicated WebSocket in binary frames,
+and resizes arrive as small JSON control frames. A shell lives only as long as
+its socket, so closing the tab, the browser, or the session ends it; opening
+and closing are audited, the typed input never is. At most eight shells may be
+open at once.
+
+## Agents
+
+The Agents page lists live agents from herdr-core (classic herdr is the
+fallback), shows each one's state and blocked reason, streams its pane over a
+dedicated socket, and sends a prompt, approves or denies a waiting prompt,
+interrupts, kills, or starts a new agent in a working directory. The pane is
+read-only: viewing must not resize the agent's real terminal, so control goes
+through the audited action API. State changes arrive on the `agents` WebSocket
+topic. When a session's Claude Code state directory is readable, the detail
+panel also shows the session id, model, token totals, estimated cost, and what
+a waiting session waits for; those totals come from tailing the transcript for
+accounting fields only. A Claude session started outside herdr (a plain shell)
+still appears in the list, marked unmanaged and listed without controls. herdr-core has no approve call, so approval presses
+Enter and denial presses Escape. Starting an agent means
+running a command line in a directory, usually a worktree path; herdr-core has
+no workspace object of its own.
+
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
 

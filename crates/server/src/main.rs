@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use dandelion_core::BuildInfo;
 use dandelion_server::{
+    agents::{self, Agents},
     app,
     audit::{AuditEntry, AuditLog},
     auth::{
@@ -18,7 +19,9 @@ use dandelion_server::{
         store::AuthStore,
         token::{hash_token, random_token},
     },
+    claude::ClaudeMonitor,
     config::{self, BindAddr},
+    containers::Containers,
     metrics::{self, Metrics},
     openapi::ApiDoc,
     services::{self, Services},
@@ -140,6 +143,7 @@ fn check_assets() -> Result<()> {
 
 async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     let (data_dir, pool) = open_database(data_dir).await?;
+    remove_retired_vapid_key(&data_dir);
     let origin = PublicOrigin::resolve().await.context(
         "resolve the public origin; set DANDELION_PUBLIC_URL when Tailscale is unavailable",
     )?;
@@ -147,7 +151,7 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
 
     let auth = Auth::new(pool.clone(), origin).context("configure authentication")?;
     let audit = AuditLog::new(pool.clone());
-    let metrics = Metrics::new(pool);
+    let metrics = Metrics::new(pool.clone());
 
     if !auth.setup_complete().await.context("read setup state")? {
         let token = auth
@@ -178,9 +182,24 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         "sudo allowlist"
     );
     let services = Services::connect(allowlist).await;
+    let containers = Containers::connect();
+    let agents = Agents::connect().await;
+    let claude = ClaudeMonitor::from_home();
+    tracing::info!(enabled = claude.is_enabled(), "Claude Code session monitor");
 
-    let state = AppState::new(audit, auth, Hub::default(), metrics, services);
+    let state = AppState::new(
+        audit,
+        auth,
+        Hub::default(),
+        metrics,
+        services,
+        containers,
+        agents,
+        claude,
+    );
     metrics::collector::spawn(state.clone());
+    agents::spawn_publisher(state.clone());
+    dandelion_server::claude::spawn_monitor(state.clone());
     serve(bind, state).await
 }
 
@@ -255,6 +274,23 @@ async fn open_database(data_dir: Option<PathBuf>) -> Result<(PathBuf, SqlitePool
     Ok((data_dir, pool))
 }
 
+/// Deletes the VAPID key an install from before the push removal left behind.
+///
+/// Web push is gone (ADR-0005), so the key alone would grant nothing; it is
+/// still private key material and should not sit in the data directory. Best
+/// effort: a missing file is the normal case, and any other failure is logged
+/// rather than blocking startup.
+fn remove_retired_vapid_key(data_dir: &Path) {
+    let key = data_dir.join("vapid.json");
+    match std::fs::remove_file(&key) {
+        Ok(()) => tracing::info!(path = %key.display(), "removed the retired web push key"),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            tracing::warn!(path = %key.display(), %error, "could not remove the retired web push key");
+        }
+    }
+}
+
 async fn serve(bind: BindAddr, state: AppState) -> Result<()> {
     let listener = TcpListener::bind(bind.socket_addr())
         .await
@@ -276,7 +312,7 @@ mod tests {
 
     use clap::{CommandFactory, Parser};
 
-    use super::{AuthCommand, BindAddr, Cli, Command};
+    use super::{AuthCommand, BindAddr, Cli, Command, remove_retired_vapid_key};
 
     #[test]
     fn cli_definition_is_valid() {
@@ -345,5 +381,28 @@ mod tests {
     #[test]
     fn auth_requires_a_subcommand() {
         assert!(Cli::try_parse_from(["dandelion", "auth"]).is_err());
+    }
+
+    #[test]
+    fn remove_retired_vapid_key_deletes_the_key() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let key = dir.path().join("vapid.json");
+        std::fs::write(&key, b"{\"private_key\":\"retired\"}").expect("write the key");
+
+        remove_retired_vapid_key(dir.path());
+
+        assert!(!key.exists());
+    }
+
+    #[test]
+    fn remove_retired_vapid_key_ignores_a_missing_key() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let neighbour = dir.path().join("sudo-allowlist.toml");
+        std::fs::write(&neighbour, b"[[rules]]\n").expect("write a neighbour file");
+
+        remove_retired_vapid_key(dir.path());
+        remove_retired_vapid_key(dir.path());
+
+        assert!(neighbour.exists());
     }
 }

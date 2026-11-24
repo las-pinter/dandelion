@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/api/client'
+import { messageOf } from '@/lib/api-error'
 import type { JournalEntry, ServicesSnapshot, UnitAction, UnitScope } from '@/lib/services'
 
 export interface ServicesState {
@@ -26,19 +27,6 @@ export interface ServicesState {
 }
 
 const JOURNAL_LINES = 200
-
-/** The API error message, or a generic fallback. */
-function messageOf(failure: unknown): string {
-  if (
-    typeof failure === 'object' &&
-    failure !== null &&
-    'message' in failure &&
-    typeof failure.message === 'string'
-  ) {
-    return failure.message
-  }
-  return 'the request failed'
-}
 
 /**
  * Reads the unit snapshot and runs service actions.

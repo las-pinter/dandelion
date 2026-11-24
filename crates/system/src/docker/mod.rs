@@ -205,9 +205,19 @@ fn log_line(output: LogOutput) -> ContainerLogLine {
     }
 }
 
+/// Checks that a container name or id is safe to put in an API path.
+///
 /// Docker builds request paths from these values without escaping them, so a
-/// reference with a slash or a dot-dot could address a different endpoint.
-fn validate_container(container: &str) -> Result<(), DockerError> {
+/// reference with a slash or a dot-dot could address a different endpoint. A
+/// caller that must refuse a bad reference before touching the daemon, such as
+/// the server's container action handler, calls this directly.
+///
+/// # Errors
+///
+/// Returns [`DockerError::InvalidContainer`] when the reference is empty,
+/// starts with a non-alphanumeric character, exceeds 255 bytes, or contains a
+/// character outside `[A-Za-z0-9_.-]`.
+pub fn validate_container(container: &str) -> Result<(), DockerError> {
     let mut characters = container.chars();
     let valid = characters
         .next()

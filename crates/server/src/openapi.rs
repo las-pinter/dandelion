@@ -35,6 +35,16 @@ use crate::auth::routes::{
         crate::services::snapshot,
         crate::services::action,
         crate::services::journal,
+        crate::containers::snapshot,
+        crate::containers::action,
+        crate::containers::logs,
+        crate::terminal::open,
+        crate::terminal::list,
+        crate::terminal::close,
+        crate::agents::routes::snapshot,
+        crate::agents::routes::action,
+        crate::agents::routes::spawn,
+        crate::agents::routes::screen,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -58,6 +68,38 @@ use crate::auth::routes::{
         dandelion_system::systemd::ActionMechanism,
         dandelion_system::systemd::AllowRule,
         dandelion_system::systemd::JournalEntry,
+        crate::containers::ContainersSnapshot,        crate::containers::ContainerAction,
+        crate::containers::ContainerActionRequest,
+        dandelion_system::docker::ContainerInfo,
+        dandelion_system::docker::ContainerState,
+        dandelion_system::docker::ContainerLogLine,
+        dandelion_system::docker::LogStream,
+        dandelion_system::docker::DockerAvailability,
+        crate::terminal::ShellInfo,
+        crate::terminal::OpenTerminalRequest,
+        crate::agents::AgentsSnapshot,
+        crate::claude::ClaudeAgent,
+        dandelion_claude::SessionStatus,
+        dandelion_claude::SessionUsage,
+        dandelion_claude::ModelUsage,
+        dandelion_claude::TokenUsage,
+        crate::agents::AgentAction,
+        crate::agents::AgentActionRequest,
+        crate::agents::SpawnAgentRequest,
+        dandelion_terminals::AgentKind,
+        dandelion_terminals::AgentState,
+        dandelion_terminals::AgentStatus,
+        dandelion_terminals::Access,
+        dandelion_terminals::BackendDescriptor,
+        dandelion_terminals::BackendKind,
+        dandelion_terminals::BlockedReason,
+        dandelion_terminals::ProtocolId,
+        dandelion_terminals::ReadOrigin,
+        dandelion_terminals::ScreenText,
+        dandelion_terminals::TerminalId,
+        dandelion_terminals::TerminalInfo,
+        dandelion_terminals::TerminalLifecycle,
+        dandelion_terminals::TerminalSize,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -134,6 +176,78 @@ mod tests {
         assert!(
             document["components"]["schemas"]["ServicesSnapshot"].is_object(),
             "missing ServicesSnapshot"
+        );
+    }
+
+    #[test]
+    fn document_lists_the_container_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in [
+            "/api/containers",
+            "/api/containers/action",
+            "/api/containers/{container}/logs",
+        ] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["ContainersSnapshot"].is_object(),
+            "missing ContainersSnapshot"
+        );
+    }
+
+    #[test]
+    fn operation_ids_are_unique() {
+        // The generated TypeScript client keys `operations` by operation id, so
+        // two handlers that share a function name would silently swap their
+        // request and response types.
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+        let mut seen = std::collections::BTreeMap::new();
+        for (path, item) in document["paths"].as_object().expect("paths") {
+            for (method, operation) in item.as_object().expect("path item") {
+                let Some(id) = operation["operationId"].as_str() else {
+                    continue;
+                };
+                if let Some(other) = seen.insert(id.to_owned(), format!("{method} {path}")) {
+                    panic!("operation id `{id}` is reused by {other}");
+                }
+            }
+        }
+        assert!(!seen.is_empty(), "the document lists operations");
+    }
+
+    #[test]
+    fn document_lists_the_terminal_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in ["/api/terminals", "/api/terminals/{id}"] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["ShellInfo"].is_object(),
+            "missing ShellInfo"
+        );
+    }
+
+    #[test]
+    fn document_lists_the_agent_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in [
+            "/api/agents",
+            "/api/agents/action",
+            "/api/agents/spawn",
+            "/api/agents/{terminal}/screen",
+        ] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["AgentsSnapshot"].is_object(),
+            "missing AgentsSnapshot"
+        );
+        assert!(
+            document["components"]["schemas"]["ClaudeAgent"].is_object(),
+            "missing ClaudeAgent"
         );
     }
 

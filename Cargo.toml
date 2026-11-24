@@ -17,14 +17,18 @@ axum = { version = "0.8.9", features = ["ws"] }
 base64 = "0.23.1"
 bollard = "0.21.1"
 clap = { version = "4.6.9", features = ["derive"] }
+dandelion-claude = { path = "crates/claude" }
 dandelion-core = { path = "crates/core" }
+dandelion-pty = { path = "crates/pty" }
 dandelion-sysmon = { path = "crates/sysmon" }
 dandelion-system = { path = "crates/system" }
+dandelion-terminals = { path = "crates/terminals" }
 futures-util = "0.3.34"
 getrandom = "0.4.3"
 http-body-util = "0.1.5"
 mime_guess = "2.0.5"
 notify = "8.2.0"
+portable-pty = "0.9.0"
 rust-embed = "8.14.0"
 rustix = { version = "1.1.6", features = ["fs", "param", "process"] }
 serde = { version = "1.0.229", features = ["derive"] }

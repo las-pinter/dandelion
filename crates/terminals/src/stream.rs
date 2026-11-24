@@ -112,10 +112,28 @@ impl std::fmt::Debug for AttachSession {
     }
 }
 
-/// Commands the attach task understands.
-#[derive(Debug)]
-pub(crate) enum AttachCommand {
+#[cfg(feature = "test-support")]
+impl AttachSession {
+    /// Builds a session over raw channels, so a test in another crate can
+    /// stand in for a backend.
+    #[must_use]
+    pub fn from_channels(
+        events: mpsc::Receiver<Result<AttachEvent, TerminalError>>,
+        commands: mpsc::Sender<AttachCommand>,
+    ) -> Self {
+        Self::new(events, commands)
+    }
+}
+
+/// A command the attach task understands.
+///
+/// Callers reach these through [`AttachSession`]; backends consume them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AttachCommand {
+    /// Raw bytes typed into the terminal.
     Input(Vec<u8>),
+    /// A new viewport size.
     Resize(TerminalSize),
+    /// The viewer detached.
     Close,
 }

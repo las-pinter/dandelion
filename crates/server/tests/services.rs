@@ -10,6 +10,7 @@ use axum::{
     response::Response,
 };
 use dandelion_server::{
+    agents::Agents,
     app::build_router,
     audit::AuditLog,
     auth::{
@@ -18,6 +19,8 @@ use dandelion_server::{
         session::now_millis,
         token::{hash_token, random_token},
     },
+    claude::ClaudeMonitor,
+    containers::Containers,
     metrics::Metrics,
     services::Services,
     state::AppState,
@@ -52,6 +55,9 @@ async fn state_with(services: Services) -> AppState {
         Hub::default(),
         Metrics::new(pool),
         services,
+        Containers::disabled(),
+        Agents::disabled(),
+        ClaudeMonitor::disabled(),
     )
 }
 

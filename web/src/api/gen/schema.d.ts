@@ -4,6 +4,78 @@
  */
 
 export interface paths {
+    "/api/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every live terminal that reports an agent. */
+        get: operations["agents_snapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Runs one agent action. */
+        post: operations["agents_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/spawn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Starts an agent in a directory. */
+        post: operations["agents_spawn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/{terminal}/screen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reads one agent's visible screen.
+         * @description History is never served: herdr-core scrolls a full-screen program to stitch
+         *     it, and scrolling is input to that program.
+         */
+        get: operations["agents_screen"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login/passkey/finish": {
         parameters: {
             query?: never;
@@ -208,6 +280,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/containers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every container the daemon lists, with its availability. */
+        get: operations["containers_snapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/containers/action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Starts, stops, or restarts one container. */
+        post: operations["containers_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/containers/{container}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads one container's newest log lines. */
+        get: operations["containers_logs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -361,15 +484,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists the open shells. */
+        get: operations["terminals_list"];
+        put?: never;
+        /** Opens a shell. */
+        post: operations["terminals_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/terminals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Closes one shell. */
+        delete: operations["terminals_close"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * @description Whether a backend may be written to.
+         * @enum {string}
+         */
+        Access: "read_write" | "read_only";
+        /**
          * @description How an action reached systemd.
          * @enum {string}
          */
         ActionMechanism: "dbus" | "sudo";
+        /** @description One agent action. */
+        AgentAction: {
+            /** @enum {string} */
+            kind: "prompt";
+            /** @description The text to send. */
+            text: string;
+        } | {
+            /** @description Key names the crate understands. */
+            keys: string[];
+            /** @enum {string} */
+            kind: "keys";
+        } | {
+            /** @enum {string} */
+            kind: "approve";
+        } | {
+            /** @enum {string} */
+            kind: "deny";
+        } | {
+            /** @enum {string} */
+            kind: "interrupt";
+        } | {
+            /** @enum {string} */
+            kind: "kill";
+        };
+        /** @description A request to act on one agent's terminal. */
+        AgentActionRequest: {
+            /** @description What to do. */
+            action: components["schemas"]["AgentAction"];
+            /** @description Backend terminal id, as listed by `GET /api/agents`. */
+            terminal: string;
+        };
+        AgentKind: string;
+        /**
+         * @description What an agent says it is doing.
+         * @enum {string}
+         */
+        AgentState: "idle" | "working" | "done" | "blocked" | "error" | "unknown";
+        /** @description An agent's state plus the details both protocols can express. */
+        AgentStatus: {
+            blocked_reason?: components["schemas"]["BlockedReason"] | null;
+            /**
+             * Format: int32
+             * @description Progress in percent, when the program reported it.
+             */
+            progress?: number | null;
+            /** @description The coarse state. */
+            state: components["schemas"]["AgentState"];
+        };
+        /** @description What the Agents page needs in one response. */
+        AgentsSnapshot: {
+            /** @description Every live terminal that reports an agent. */
+            agents: components["schemas"]["TerminalInfo"][];
+            /** @description Whether a backend answered. */
+            available: boolean;
+            backend?: components["schemas"]["BackendDescriptor"] | null;
+            /** @description Claude Code sessions, when that state directory is readable. */
+            claude: components["schemas"]["ClaudeAgent"][];
+        };
         /** @description One allowlist entry: a unit and the verbs permitted on it. */
         AllowRule: {
             /** @description Full unit name. */
@@ -391,12 +612,121 @@ export interface components {
             /** @description No complete owner exists yet. */
             setup_required: boolean;
         };
+        /** @description What detection learned about one backend. */
+        BackendDescriptor: {
+            /** @description Read-write or read-only. */
+            access: components["schemas"]["Access"];
+            /** @description Whether it answered. */
+            available: boolean;
+            /** @description Why a backend is unavailable or read-only. */
+            detail?: string | null;
+            /** @description Which backend this describes. */
+            kind: components["schemas"]["BackendKind"];
+            protocol?: components["schemas"]["ProtocolId"] | null;
+            /** @description The version it reported. */
+            version?: string | null;
+        };
+        /**
+         * @description Which backends exist.
+         * @enum {string}
+         */
+        BackendKind: "herdr_core" | "herdr";
+        /**
+         * @description Why a blocked agent is waiting.
+         * @enum {string}
+         */
+        BlockedReason: "permission" | "question" | "auth" | "other";
         /** @description A `WebAuthn` challenge and the server-side ceremony id. */
         ChallengeResponse: {
             /** @description Opaque id for the finish call. */
             ceremony_id: string;
             /** @description The `PublicKeyCredentialCreationOptions` or request options. */
             options: Record<string, never>;
+        };
+        /** @description One Claude Code session, as the agents page sees it. */
+        ClaudeAgent: {
+            /** @description Agent name when the session runs an agent. */
+            agent?: string | null;
+            /** @description Working directory the session was launched in. */
+            cwd: string;
+            /** @description Human-readable session name, when set. */
+            name?: string | null;
+            /** @description Session id, used to locate the transcript. */
+            sessionId: string;
+            status?: components["schemas"]["SessionStatus"] | null;
+            /** @description herdr-core terminal the session runs in, from its environment. */
+            terminal?: string | null;
+            /**
+             * Format: int64
+             * @description Last update time in Unix milliseconds.
+             */
+            updatedAt?: number | null;
+            /** @description Token totals and the estimated cost. */
+            usage: components["schemas"]["SessionUsage"];
+            /** @description Claude Code version reported by the session. */
+            version?: string | null;
+            /** @description What a waiting session is waiting for, when reported. */
+            waitingFor?: string | null;
+        };
+        /**
+         * @description One container action.
+         * @enum {string}
+         */
+        ContainerAction: "start" | "stop" | "restart";
+        /** @description A request to start, stop, or restart one container. */
+        ContainerActionRequest: {
+            /** @description What to do with the container. */
+            action: components["schemas"]["ContainerAction"];
+            /** @description Container name or id, as listed by `GET /api/containers`. */
+            container: string;
+            /**
+             * Format: int32
+             * @description Seconds to wait before killing the container; stop and restart only.
+             */
+            timeout_secs?: number | null;
+        };
+        /** @description A container as listed by the daemon. */
+        ContainerInfo: {
+            /** @description Command the container runs, when reported. */
+            command?: string | null;
+            /**
+             * Format: int64
+             * @description Creation time as a Unix timestamp in seconds.
+             */
+            created_at_unix?: number | null;
+            /** @description Container id. */
+            id: string;
+            /** @description Image reference used to create the container. */
+            image: string;
+            /** @description Container labels. */
+            labels: {
+                [key: string]: string;
+            };
+            /** @description Primary name, without Docker's leading slash. */
+            name: string;
+            /** @description Runtime state. */
+            state: components["schemas"]["ContainerState"];
+            /** @description Human-readable status line, such as `Up 3 hours`. */
+            status: string;
+        };
+        /** @description One log line from a container. */
+        ContainerLogLine: {
+            /** @description The line, with invalid UTF-8 replaced. */
+            message: string;
+            /** @description The stream the line came from. */
+            stream: components["schemas"]["LogStream"];
+        };
+        /**
+         * @description Runtime state of a container.
+         * @enum {string}
+         */
+        ContainerState: "created" | "running" | "paused" | "restarting" | "exited" | "removing" | "dead" | "stopping" | "unknown";
+        /** @description What the containers page needs in one response. */
+        ContainersSnapshot: {
+            /** @description Whether the daemon answered, and why not when it did not. */
+            availability: components["schemas"]["DockerAvailability"];
+            /** @description Every container the daemon lists, sorted by name. */
+            containers: components["schemas"]["ContainerInfo"][];
         };
         /** @description Processor usage and load averages. */
         Cpu: {
@@ -448,6 +778,15 @@ export interface components {
              * @description Write throughput of the backing device in bytes per second.
              */
             write_bytes_per_sec: number;
+        };
+        /** @description Whether the Docker daemon can be reached. */
+        DockerAvailability: {
+            /** @description True when a daemon answered. */
+            available: boolean;
+            /** @description Why the daemon is unreachable, when it is not. */
+            reason?: string | null;
+            /** @description Daemon version, when it answered. */
+            server_version?: string | null;
         };
         /** @description Finishes a passkey login. */
         FinishAuthenticationRequest: {
@@ -535,6 +874,11 @@ export interface components {
              */
             one: number;
         };
+        /**
+         * @description Which output stream a log line came from.
+         * @enum {string}
+         */
+        LogStream: "stdout" | "stderr" | "stdin" | "console";
         /** @description Password login. */
         LoginPasswordRequest: {
             /** @description The candidate password. */
@@ -655,6 +999,18 @@ export interface components {
             /** @description Disk write rate in bytes per second. */
             write_bytes_per_sec: components["schemas"]["Stat"];
         };
+        /** @description Token usage and estimated cost for one model. */
+        ModelUsage: {
+            /**
+             * Format: double
+             * @description Estimated cost, or `None` when the model is absent from the price table.
+             */
+            costUsd?: number | null;
+            /** @description Model id exactly as written in the transcript. */
+            model: string;
+            /** @description Tokens attributed to this model. */
+            tokens: components["schemas"]["TokenUsage"];
+        };
         /** @description A network interface with its traffic rates. */
         NetworkInterface: {
             /** @description Interface name, for example `eth0`. */
@@ -669,6 +1025,19 @@ export interface components {
              * @description Transmitted bytes per second.
              */
             tx_bytes_per_sec: number;
+        };
+        /** @description A request to open a shell. */
+        OpenTerminalRequest: {
+            /**
+             * Format: int32
+             * @description Initial width in cells; defaults to 80.
+             */
+            cols?: number | null;
+            /**
+             * Format: int32
+             * @description Initial height in cells; defaults to 24.
+             */
+            rows?: number | null;
         };
         /** @description A process and its resource usage at sample time. */
         Process: {
@@ -742,6 +1111,29 @@ export interface components {
          * @enum {string}
          */
         ProcessState: "running" | "sleeping" | "disk_sleep" | "stopped" | "tracing_stop" | "zombie" | "idle" | "dead" | "unknown";
+        /** @description The protocol generation a backend speaks. */
+        ProtocolId: {
+            /** @enum {string} */
+            backend: "herdr_core";
+            /**
+             * Format: int32
+             * @description `hello.generation`.
+             */
+            generation: number;
+        } | {
+            /** @enum {string} */
+            backend: "herdr";
+            /**
+             * Format: int32
+             * @description `ping.protocol`.
+             */
+            protocol: number;
+        };
+        /**
+         * @description Where the text of a screen read came from.
+         * @enum {string}
+         */
+        ReadOrigin: "screen" | "visible" | "recent" | "recent_unwrapped" | "detection" | "stitched" | "unknown";
         /** @description A request to change a process's nice value. */
         ReniceRequest: {
             /**
@@ -756,6 +1148,17 @@ export interface components {
              */
             priority: number;
         };
+        /** @description Plain text read from a terminal. */
+        ScreenText: {
+            /** @description False when part of what was asked for may be missing. */
+            complete: boolean;
+            /** @description Where the text came from. */
+            origin: components["schemas"]["ReadOrigin"];
+            /** @description The text. */
+            text: string;
+            /** @description True when the backend truncated the text. */
+            truncated: boolean;
+        };
         /** @description What the services page needs in one response. */
         ServicesSnapshot: {
             /** @description The system-scope rules the sudo allowlist permits. */
@@ -767,6 +1170,26 @@ export interface components {
         SessionResponse: {
             /** @description Always true; present so the body is never empty. */
             authenticated: boolean;
+        };
+        /** @description Session state. Unknown values are preserved verbatim rather than mapped. */
+        SessionStatus: string;
+        /** @description Token usage and estimated cost for one session. */
+        SessionUsage: {
+            /**
+             * Format: double
+             * @description Sum of priced models. Unpriced models contribute nothing.
+             */
+            costUsd: number;
+            /** @description Number of distinct assistant responses counted. */
+            messages: number;
+            /** @description Per-model usage, sorted by model id. */
+            models: components["schemas"]["ModelUsage"][];
+            /** @description Session the usage belongs to. */
+            sessionId: string;
+            /** @description Sum across all models. */
+            tokens: components["schemas"]["TokenUsage"];
+            /** @description Models that could not be priced, sorted. */
+            unpricedModels: string[];
         };
         /** @description Sets the owner password during setup. */
         SetupPasswordRequest: {
@@ -788,6 +1211,30 @@ export interface components {
         SetupTokenRequest: {
             /** @description The single-use setup token. */
             token: string;
+        };
+        /** @description What the page needs to know about one open shell. */
+        ShellInfo: {
+            /** @description True while a browser socket is attached to this shell. */
+            attached: boolean;
+            /**
+             * Format: int32
+             * @description Current width in cells.
+             */
+            cols: number;
+            /**
+             * Format: int64
+             * @description Creation time as a Unix timestamp in seconds.
+             */
+            created_at_unix: number;
+            /** @description Terminal id, as a UUID string. */
+            id: string;
+            /**
+             * Format: int32
+             * @description Current height in cells.
+             */
+            rows: number;
+            /** @description The shell that runs in it. */
+            shell: string;
         };
         /** @description A request to signal a process. */
         SignalRequest: {
@@ -826,6 +1273,15 @@ export interface components {
              */
             uptime_secs: number;
         };
+        /** @description A request to start an agent in a directory. */
+        SpawnAgentRequest: {
+            /** @description Working directory, usually a project or worktree path. */
+            cwd?: string | null;
+            /** @description The shell line to run, such as `claude`. */
+            line: string;
+            /** @description Tab name; the backend requires uniqueness among live terminals. */
+            name?: string | null;
+        };
         /** @description Average and maximum of one metric within a minute. */
         Stat: {
             /**
@@ -851,10 +1307,81 @@ export interface components {
             /** @description Sensor label within the chip. */
             label: string;
         };
+        TerminalId: string;
+        /** @description One terminal in the common model. */
+        TerminalInfo: {
+            agent_kind?: components["schemas"]["AgentKind"] | null;
+            agent_state?: components["schemas"]["AgentStatus"] | null;
+            /**
+             * Format: int64
+             * @description Creation time in milliseconds since the epoch, when reported.
+             */
+            created_ms?: number | null;
+            /** @description Current working directory, when the backend knows it. */
+            cwd?: string | null;
+            /**
+             * Format: int32
+             * @description Exit code, once finished.
+             */
+            exit_code?: number | null;
+            /** @description Why the program ended, once finished. */
+            finished_reason?: string | null;
+            /** @description Backend address of the terminal. */
+            id: components["schemas"]["TerminalId"];
+            /** @description Free-form labels. Classic herdr reports structural ids here. */
+            labels?: {
+                [key: string]: string;
+            };
+            /** @description Whether the program is still running. */
+            lifecycle: components["schemas"]["TerminalLifecycle"];
+            /** @description Human-readable title, falling back to the name or address. */
+            title: string;
+        };
+        /**
+         * @description Whether the program in a terminal is still running.
+         * @enum {string}
+         */
+        TerminalLifecycle: "live" | "finished";
+        /** @description Terminal columns and rows. */
+        TerminalSize: {
+            /**
+             * Format: int32
+             * @description Columns.
+             */
+            cols: number;
+            /**
+             * Format: int32
+             * @description Rows.
+             */
+            rows: number;
+        };
         /** @description Setup token in or out of a query string. */
         TokenQuery: {
             /** @description The single-use setup token. */
             token: string;
+        };
+        /** @description Token counts for one model or one session. */
+        TokenUsage: {
+            /**
+             * Format: int64
+             * @description Input tokens written to the prompt cache.
+             */
+            cacheCreationInputTokens: number;
+            /**
+             * Format: int64
+             * @description Input tokens read from the prompt cache.
+             */
+            cacheReadInputTokens: number;
+            /**
+             * Format: int64
+             * @description Uncached input tokens.
+             */
+            inputTokens: number;
+            /**
+             * Format: int64
+             * @description Output tokens.
+             */
+            outputTokens: number;
         };
         /**
          * @description A mutating action on a unit.
@@ -910,6 +1437,212 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    agents_snapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Agents and the backend descriptor */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentsSnapshot"];
+                };
+            };
+            /** @description The backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No backend is available */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    agents_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The action ran */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A key name is not valid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No such terminal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The agent is blocked or the backend refuses */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No backend is available */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    agents_spawn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpawnAgentRequest"];
+            };
+        };
+        responses: {
+            /** @description The new terminal */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TerminalInfo"];
+                };
+            };
+            /** @description The backend refuses the spawn */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No backend is available */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    agents_screen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description backend terminal id */
+                terminal: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The screen text */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScreenText"];
+                };
+            };
+            /** @description No such terminal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No backend is available */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     login_passkey_finish: {
         parameters: {
             query?: never;
@@ -1261,6 +1994,146 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthStatus"];
+                };
+            };
+        };
+    };
+    containers_snapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Containers and daemon availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainersSnapshot"];
+                };
+            };
+            /** @description Docker answered with an error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker became unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    containers_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContainerActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The action ran */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The container reference or timeout is not valid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker answered with an error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    containers_logs: {
+        parameters: {
+            query?: {
+                /** @description Number of newest lines to return (default 200, maximum 1000). */
+                tail?: number;
+            };
+            header?: never;
+            path: {
+                /** @description container name or id */
+                container: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Log lines, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerLogLine"][];
+                };
+            };
+            /** @description The container reference is not valid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker answered with an error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Docker is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };
@@ -1644,6 +2517,98 @@ export interface operations {
             };
             /** @description No sample yet */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    terminals_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every open terminal */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShellInfo"][];
+                };
+            };
+        };
+    };
+    terminals_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenTerminalRequest"];
+            };
+        };
+        responses: {
+            /** @description The shell opened */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShellInfo"];
+                };
+            };
+            /** @description The shell could not start */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too many terminals are open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    terminals_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description terminal id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The shell closed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such terminal */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

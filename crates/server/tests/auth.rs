@@ -6,9 +6,12 @@ use axum::{
     response::Response,
 };
 use dandelion_server::{
+    agents::Agents,
     app::build_router,
     audit::AuditLog,
     auth::{Auth, origin::PublicOrigin, password, session::now_millis, token::hash_token},
+    claude::ClaudeMonitor,
+    containers::Containers,
     metrics::Metrics,
     services::Services,
     state::AppState,
@@ -33,6 +36,9 @@ async fn test_state() -> AppState {
         Hub::default(),
         Metrics::new(pool),
         Services::disabled(),
+        Containers::disabled(),
+        Agents::disabled(),
+        ClaudeMonitor::disabled(),
     )
 }
 

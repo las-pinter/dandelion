@@ -143,7 +143,12 @@ fn parse_snapshot(value: &Value) -> Result<Option<Resync>, TerminalError> {
 }
 
 fn map_event(event: &EventParams) -> Result<Option<TerminalEvent>, TerminalError> {
-    let terminal = TerminalId::new(event.terminal.clone());
+    // `doc` and other global events carry no terminal; they are not terminal
+    // state and must not end the stream.
+    let Some(terminal) = event.terminal.as_deref() else {
+        return Ok(None);
+    };
+    let terminal = TerminalId::new(terminal);
     let data = &event.data;
     let change = match event.kind.as_str() {
         "created" | "restarted" => {
@@ -249,6 +254,21 @@ mod tests {
     use crate::jsonrpc::{self, Incoming};
     use crate::model::{AgentState, BlockedReason, ReadOrigin, TerminalLifecycle};
     use crate::test_support::{core_events, core_hello, core_list, core_read, core_subscribe};
+
+    #[test]
+    fn a_global_event_without_a_terminal_is_ignored() {
+        let notice = parse_notice(
+            "event",
+            &serde_json::json!({
+                "seq": 12,
+                "type": "doc",
+                "data": { "doc": "herdr-app", "value": {} }
+            }),
+        )
+        .expect("a global event is not an error");
+
+        assert!(notice.is_none());
+    }
 
     #[test]
     fn hello_fixture_reports_the_verified_generation() {

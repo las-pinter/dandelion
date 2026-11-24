@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/api/client'
+import { messageOf } from '@/lib/api-error'
 import type { ProcessInfo, ProcessSignal } from '@/lib/processes'
 
 export interface ProcessesState {
@@ -19,19 +20,6 @@ export interface ProcessesState {
   renice: (pid: number, priority: number) => Promise<void>
 }
 
-/** The API error message, or a generic fallback. */
-function messageOf(failure: unknown): string {
-  if (
-    typeof failure === 'object' &&
-    failure !== null &&
-    'message' in failure &&
-    typeof failure.message === 'string'
-  ) {
-    return failure.message
-  }
-  return 'the action failed'
-}
-
 type FetchResult =
   { processes: ProcessInfo[]; error?: never } | { error: string; processes?: never }
 
@@ -39,7 +27,7 @@ type FetchResult =
 async function fetchProcesses(): Promise<FetchResult> {
   try {
     const { data, error } = await api.GET('/api/processes')
-    return data ? { processes: data } : { error: messageOf(error) }
+    return data ? { processes: data } : { error: messageOf(error, 'the action failed') }
   } catch (cause: unknown) {
     return { error: cause instanceof Error ? cause.message : 'cannot reach the server' }
   }
@@ -95,7 +83,7 @@ export function useProcesses(): ProcessesState {
       try {
         const { error: failure } = await action()
         if (failure !== undefined) {
-          setError(messageOf(failure))
+          setError(messageOf(failure, 'the action failed'))
           return
         }
         reload()
