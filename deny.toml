@@ -10,8 +10,21 @@ ignore = [
   # operations. webauthn-rs-core imports only RS256PublicKey / RS256VerifyingKey
   # to check WebAuthn signatures; this process never holds an RSA private key.
   # The resolved 0.10.0-rc.19 already contains the constant-time rewrite, but
-  # the advisory clears only a stable 0.10.0. Revisit when webauthn-rs updates.
+  # the advisory clears only a stable 0.10.0. web-push also pulls rsa 0.9.10
+  # through superboring -> jwt-simple, which signs the VAPID JWT with ES256
+  # only, so no RSA private-key operation runs there either. Revisit when
+  # webauthn-rs or web-push updates.
   "RUSTSEC-2023-0071",
+  # RUSTSEC-2026-0543 (chrono unmaintained). web-push uses chrono only to
+  # format VAPID JWT timestamps; no untrusted date is parsed in this process.
+  # Revisit when web-push moves off chrono.
+  "RUSTSEC-2026-0543",
+  # RUSTSEC-2026-0387 (crypto-bigint 0.5 timing). Reachable only through
+  # jwt-simple's ES256 signing of Dandelion's VAPID JWT with Dandelion's own
+  # key; the attack needs local timing observation, and the key only
+  # authorizes push messages. web-push pins elliptic-curve 0.13, so no
+  # upgrade exists; revisit when web-push updates.
+  "RUSTSEC-2026-0387",
 ]
 
 [licenses]

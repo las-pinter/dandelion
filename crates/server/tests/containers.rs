@@ -22,6 +22,7 @@ use dandelion_server::{
     claude::ClaudeMonitor,
     containers::{ContainerAction, ContainerActionRequest, Containers},
     metrics::Metrics,
+    notifications::Notifications,
     services::Services,
     state::AppState,
     storage,
@@ -48,6 +49,7 @@ async fn state_with(containers: Containers) -> AppState {
         containers,
         Agents::disabled(),
         ClaudeMonitor::disabled(),
+        Notifications::disabled(),
     )
 }
 

@@ -5,6 +5,7 @@ import type { PageDefinition } from '@/app/page-registry'
 import { AgentRow } from '@/components/AgentRow/AgentRow'
 import { MetricCard } from '@/components/MetricCard/MetricCard'
 import { MetricChart } from '@/components/MetricChart/MetricChart'
+import { NotificationsPanel } from '@/components/NotificationsPanel/NotificationsPanel'
 import { Panel } from '@/components/Panel/Panel'
 import { Button } from '@/components/ui/button'
 import { useSystemMetrics } from '@/hooks/use-system-metrics'
@@ -194,6 +195,7 @@ export function DashboardPage() {
           </dl>
         </Panel>
       </div>
+      <NotificationsPanel />
     </div>
   )
 }

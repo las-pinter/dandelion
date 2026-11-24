@@ -12,6 +12,7 @@ pub mod config;
 pub mod containers;
 pub mod health;
 pub mod metrics;
+pub mod notifications;
 pub mod openapi;
 pub mod processes;
 pub mod services;

@@ -23,6 +23,7 @@ use dandelion_server::{
     config::{self, BindAddr},
     containers::Containers,
     metrics::{self, Metrics},
+    notifications::{self, Notifications},
     openapi::ApiDoc,
     services::{self, Services},
     shutdown,
@@ -110,7 +111,19 @@ async fn main() -> Result<()> {
 
 fn init_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(pinned_filter(filter))
+        .init();
+}
+
+/// The push client logs the full request URI at debug, which is the
+/// notification endpoint, a capability URL. Pin it to warn even when the
+/// operator raises the level for everything else.
+fn pinned_filter(filter: EnvFilter) -> EnvFilter {
+    match "web_push=warn".parse::<tracing_subscriber::filter::Directive>() {
+        Ok(directive) => filter.add_directive(directive),
+        Err(_) => filter,
+    }
 }
 
 fn print_openapi() -> Result<()> {
@@ -150,7 +163,7 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
 
     let auth = Auth::new(pool.clone(), origin).context("configure authentication")?;
     let audit = AuditLog::new(pool.clone());
-    let metrics = Metrics::new(pool);
+    let metrics = Metrics::new(pool.clone());
 
     if !auth.setup_complete().await.context("read setup state")? {
         let token = auth
@@ -185,6 +198,7 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     let agents = Agents::connect().await;
     let claude = ClaudeMonitor::from_home();
     tracing::info!(enabled = claude.is_enabled(), "Claude Code session monitor");
+    let notifications = Notifications::boot(&data_dir, pool, &auth.origin().as_str());
 
     let state = AppState::new(
         audit,
@@ -195,10 +209,12 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         containers,
         agents,
         claude,
+        notifications,
     );
     metrics::collector::spawn(state.clone());
     agents::spawn_publisher(state.clone());
     dandelion_server::claude::spawn_monitor(state.clone());
+    notifications::spawn_watchers(state.clone());
     serve(bind, state).await
 }
 
@@ -290,11 +306,65 @@ async fn serve(bind: BindAddr, state: AppState) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::{Path, PathBuf};
+    use std::{
+        io::Write,
+        path::{Path, PathBuf},
+        sync::{Arc, Mutex},
+    };
 
     use clap::{CommandFactory, Parser};
+    use tracing_subscriber::EnvFilter;
 
-    use super::{AuthCommand, BindAddr, Cli, Command};
+    use super::{AuthCommand, BindAddr, Cli, Command, pinned_filter};
+
+    #[derive(Clone, Default)]
+    struct Capture(Arc<Mutex<Vec<u8>>>);
+
+    impl Write for Capture {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().expect("capture").extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for Capture {
+        type Writer = Self;
+
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    #[test]
+    fn push_client_debug_logging_is_pinned_off() {
+        let capture = Capture::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_env_filter(pinned_filter(EnvFilter::new("debug")))
+            .with_writer(capture.clone())
+            .finish();
+        tracing::subscriber::with_default(subscriber, || {
+            tracing::debug!(
+                target: "web_push::clients::hyper_client",
+                "endpoint https://push.example/secret"
+            );
+            tracing::debug!(
+                target: "dandelion_server::notifications",
+                "an application event"
+            );
+        });
+
+        let printed =
+            String::from_utf8(capture.0.lock().expect("capture").clone()).expect("utf8 output");
+        assert!(
+            !printed.contains("push.example"),
+            "the capability URL is suppressed"
+        );
+        assert!(printed.contains("an application event"));
+    }
 
     #[test]
     fn cli_definition_is_valid() {
