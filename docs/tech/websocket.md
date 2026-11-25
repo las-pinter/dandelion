@@ -57,7 +57,7 @@ transport.
 | Topic | Payload | Cadence |
 |---|---|---|
 | `system.metrics` | `LiveSample`: `{ snapshot, point }` — the full `Snapshot` plus the compact `MetricsPoint` the server also stores | One per second while the collector runs |
-| `agents` | `{ kind: "resync", terminals: [...] }` when the server's backend subscription starts or restarts, `{ kind: "terminal", terminal, change }` per backend event, and `{ kind: "claude" }` when a Claude Code session's state or usage changes | On every backend or session change |
+| `agents` | `{ kind: "resync", terminals: [...] }` when the server's backend subscription starts or restarts, `{ kind: "terminal", terminal, change }` per backend event, `{ kind: "claude" }` when a Claude Code session's state or usage changes, and `{ kind: "backend" }` when the startup retry adopts a backend that was not up yet | On every backend or session change |
 
 A browser that subscribes later does not receive that resync; it takes its
 first paint from `GET /api/agents` and follows the topic for changes.

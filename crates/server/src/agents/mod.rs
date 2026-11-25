@@ -1,25 +1,28 @@
 //! Agent listing and control over a terminal backend.
 //!
 //! herdr-core is tried first, then classic herdr; with neither reachable the
-//! snapshot reports the page as unavailable instead of failing. Agents are
+//! snapshot reports the page as unavailable instead of failing, and a
+//! background retry adopts a backend that starts after the server. Agents are
 //! terminals that report an agent kind. State changes ride the `agents` hub
 //! topic; output rides a per-agent attach socket, because the hub carries
 //! JSON only. Every mutating request writes exactly one audit row; the typed
 //! prompt and the keys are never audited.
 
+mod backend;
 mod publisher;
 pub mod routes;
 mod ws;
 
-pub use publisher::spawn_publisher;
+pub use backend::spawn_backend_retry;
+pub use publisher::{spawn_publisher, spawn_publisher_with};
 pub use routes::router;
 
-use std::sync::Arc;
+use std::sync::{Arc, PoisonError, RwLock};
 
 use dandelion_terminals::{
     AttachMode, AttachOptions, AttachSession, BackendDescriptor, KeyName, ReadOptions, ScreenText,
     SendOptions, SpawnSpec, TerminalBackend, TerminalError, TerminalFilter, TerminalId,
-    TerminalInfo, TerminalSize, herdr::ClassicHerdrBackend, herdr_core::HerdrCoreBackend,
+    TerminalInfo, TerminalSize,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -139,7 +142,7 @@ pub struct SpawnAgentRequest {
 /// Why an agent request failed.
 #[derive(Debug, thiserror::Error)]
 pub enum AgentsError {
-    /// No terminal backend answered at startup.
+    /// No terminal backend is available at request time.
     #[error("no terminal backend is available")]
     Unavailable,
     /// An action arrived that needs a person's eye first.
@@ -150,57 +153,71 @@ pub enum AgentsError {
     Backend(#[from] TerminalError),
 }
 
-/// The backend in force, chosen once at startup.
+/// The backend in force.
+///
+/// Chosen at startup, or installed once when the retry adopts a backend that
+/// answered late. Handlers read it on a request path, so the lock only guards
+/// a pointer swap and is never held across an await.
 #[derive(Clone, Default)]
 pub struct Agents {
-    backend: Option<Arc<dyn TerminalBackend>>,
+    backend: Arc<RwLock<Option<Arc<dyn TerminalBackend>>>>,
 }
 
 impl std::fmt::Debug for Agents {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("Agents")
-            .field("available", &self.backend.is_some())
+            .field("available", &self.backend().is_some())
             .finish()
     }
 }
 
 impl Agents {
     /// Picks herdr-core, then classic herdr, keeping the server up with
-    /// neither.
+    /// neither. [`spawn_backend_retry`] covers a backend that starts later.
     pub async fn connect() -> Self {
-        let core = HerdrCoreBackend::from_environment();
-        if core.detect().await.available {
-            tracing::info!(socket = %core.socket().display(), "agent backend: herdr-core");
-            return Self::with_backend(Arc::new(core));
+        let agents = Self::default();
+        if let Some(backend) = backend::detect().await {
+            agents.install(backend);
+        } else {
+            tracing::warn!("no terminal backend is available at startup");
         }
-        let classic = ClassicHerdrBackend::from_environment();
-        if classic.detect().await.available {
-            tracing::info!(socket = %classic.socket().display(), "agent backend: classic herdr");
-            return Self::with_backend(Arc::new(classic));
-        }
-        tracing::warn!("no terminal backend is available; agent actions are disabled");
-        Self { backend: None }
+        agents
     }
 
     /// Uses an explicit backend; tests inject a fake.
     #[must_use]
     pub fn with_backend(backend: Arc<dyn TerminalBackend>) -> Self {
-        Self {
-            backend: Some(backend),
-        }
+        let agents = Self::default();
+        agents.install(backend);
+        agents
     }
 
     /// A disabled service with no backend.
     #[must_use]
     pub fn disabled() -> Self {
-        Self { backend: None }
+        Self::default()
+    }
+
+    /// Adopts a backend discovered after startup.
+    ///
+    /// Only the boot retry and tests call this, once, on an empty slot; the
+    /// retry's own guard keeps a live backend from being replaced. Overwriting
+    /// is possible here because the slot has no owner to hand the old value
+    /// back to.
+    #[doc(hidden)]
+    pub fn install(&self, backend: Arc<dyn TerminalBackend>) {
+        let mut slot = self.backend.write().unwrap_or_else(PoisonError::into_inner);
+        *slot = Some(backend);
     }
 
     /// The backend, when one is available.
     #[must_use]
     pub fn backend(&self) -> Option<Arc<dyn TerminalBackend>> {
-        self.backend.clone()
+        self.backend
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     /// Every live terminal with an agent, plus the backend's descriptor.
@@ -212,7 +229,7 @@ impl Agents {
     ///
     /// Returns the backend's error when the listing fails.
     pub async fn snapshot(&self) -> Result<AgentsListing, AgentsError> {
-        let Some(backend) = self.backend.as_ref() else {
+        let Some(backend) = self.backend() else {
             return Ok(AgentsListing {
                 available: false,
                 backend: None,
@@ -250,7 +267,7 @@ impl Agents {
     /// Returns [`AgentsError::Unavailable`] without a backend and the
     /// backend's error when the read fails.
     pub async fn screen(&self, terminal: &str) -> Result<ScreenText, AgentsError> {
-        let backend = self.backend.as_ref().ok_or(AgentsError::Unavailable)?;
+        let backend = self.backend().ok_or(AgentsError::Unavailable)?;
         Ok(backend
             .read(&TerminalId::new(terminal), ReadOptions::screen())
             .await?)
@@ -264,7 +281,7 @@ impl Agents {
     /// [`AgentsError::Blocked`] when an action needs a person first, and the
     /// backend's error otherwise.
     pub async fn act(&self, request: &AgentActionRequest) -> Result<(), AgentsError> {
-        let backend = self.backend.as_ref().ok_or(AgentsError::Unavailable)?;
+        let backend = self.backend().ok_or(AgentsError::Unavailable)?;
         let id = TerminalId::new(request.terminal.clone());
         match &request.action {
             AgentAction::Prompt { text } => {
@@ -303,7 +320,7 @@ impl Agents {
     /// Returns [`AgentsError::Unavailable`] without a backend and the
     /// backend's error when the spawn fails.
     pub async fn spawn(&self, request: &SpawnAgentRequest) -> Result<TerminalInfo, AgentsError> {
-        let backend = self.backend.as_ref().ok_or(AgentsError::Unavailable)?;
+        let backend = self.backend().ok_or(AgentsError::Unavailable)?;
         let mut spec = SpawnSpec::new().line(request.line.clone());
         spec.cwd.clone_from(&request.cwd);
         if let Some(name) = &request.name {
@@ -323,7 +340,7 @@ impl Agents {
     /// Returns [`AgentsError::Unavailable`] without a backend and the
     /// backend's error when the attach fails.
     pub async fn attach(&self, terminal: &str) -> Result<AttachSession, AgentsError> {
-        let backend = self.backend.as_ref().ok_or(AgentsError::Unavailable)?;
+        let backend = self.backend().ok_or(AgentsError::Unavailable)?;
         let options = AttachOptions {
             mode: AttachMode::Observe,
             size: ATTACH_SIZE,

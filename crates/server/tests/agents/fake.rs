@@ -5,6 +5,8 @@
 //! real channel pair: the test sends output and reads the commands the socket
 //! produced.
 
+#![allow(dead_code)] // each test binary uses a subset
+
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -16,10 +18,10 @@ use dandelion_claude::ClaudePaths;
 use dandelion_server::claude::ClaudeMonitor;
 use dandelion_terminals::{
     Access, AgentKind, AgentState, AgentStatus, AttachCommand, AttachEvent, AttachMode,
-    AttachOptions, AttachSession, BackendDescriptor, BackendKind, BlockedReason, EventStream,
-    InterruptOutcome, InterruptResult, KeyName, ReadOptions, ScreenText, SendOptions, SendOutcome,
-    SpawnSpec, TerminalBackend, TerminalError, TerminalFilter, TerminalId, TerminalInfo,
-    TerminalLifecycle, TerminalSize,
+    AttachOptions, AttachSession, BackendDescriptor, BackendEvent, BackendKind, BlockedReason,
+    EventStream, InterruptOutcome, InterruptResult, KeyName, ReadOptions, Resync, ScreenText,
+    SendOptions, SendOutcome, SpawnSpec, TerminalBackend, TerminalError, TerminalFilter,
+    TerminalId, TerminalInfo, TerminalLifecycle, TerminalSize,
 };
 use tokio::sync::mpsc;
 
@@ -211,7 +213,19 @@ impl TerminalBackend for FakeBackend {
     }
 
     async fn subscribe(&self, _filter: &TerminalFilter) -> Result<EventStream, TerminalError> {
-        Err(TerminalError::Unsupported("subscribe".to_owned()))
+        // One resync, then the stream ends; the publisher resubscribes later.
+        let (sender, receiver) = mpsc::channel(1);
+        let resync = BackendEvent::Resync(Resync {
+            seq: 1,
+            terminals: vec![Self::terminal()],
+        });
+        sender
+            .send(Ok(resync))
+            .await
+            .map_err(|_| TerminalError::Closed)?;
+        drop(sender);
+
+        Ok(EventStream::from_channel(receiver))
     }
 
     async fn read(

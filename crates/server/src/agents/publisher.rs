@@ -2,7 +2,9 @@
 //!
 //! Output is not here: it rides the attach socket. This task only mirrors the
 //! backend's event stream so lists update without polling. A closed or failed
-//! stream reconnects with a fresh resync after a short pause.
+//! stream reconnects with a fresh resync after a short pause. This is the only
+//! owner of the subscription: the task waits for a backend that starts after
+//! the server rather than exiting, so the startup retry never starts a second.
 
 use std::time::Duration;
 
@@ -12,15 +14,26 @@ use serde_json::json;
 use super::TOPIC;
 use crate::state::AppState;
 
-/// How long to wait before resubscribing after the backend went away.
+/// How long to wait before resubscribing after the backend went away, and
+/// before rechecking for a backend that has not appeared yet.
 const RETRY: Duration = Duration::from_secs(5);
 
-/// Starts the background publisher; a no-op task with no backend.
+/// Starts the background publisher; it waits for a backend when there is none.
 pub fn spawn_publisher(state: AppState) {
+    spawn_publisher_with(state, RETRY);
+}
+
+/// Starts the publisher with a given wait.
+///
+/// This is a test seam: an integration test passes milliseconds, because the
+/// production wait is seconds. Production code calls [`spawn_publisher`].
+#[doc(hidden)]
+pub fn spawn_publisher_with(state: AppState, retry: Duration) {
     tokio::spawn(async move {
         loop {
             let Some(backend) = state.agents.backend() else {
-                return;
+                tokio::time::sleep(retry).await;
+                continue;
             };
             match backend.subscribe(&TerminalFilter::all()).await {
                 Ok(mut stream) => {
@@ -58,7 +71,7 @@ pub fn spawn_publisher(state: AppState) {
                     tracing::warn!(%error, "cannot subscribe to agent events");
                 }
             }
-            tokio::time::sleep(RETRY).await;
+            tokio::time::sleep(retry).await;
         }
     });
 }

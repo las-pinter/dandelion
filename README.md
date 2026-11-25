@@ -152,14 +152,16 @@ dedicated socket, and sends a prompt, approves or denies a waiting prompt,
 interrupts, kills, or starts a new agent in a working directory. The pane is
 read-only: viewing must not resize the agent's real terminal, so control goes
 through the audited action API. State changes arrive on the `agents` WebSocket
-topic. When a session's Claude Code state directory is readable, the detail
+topic. If no terminal backend answers at startup, a background retry adopts
+one when it appears, so a reboot needs no manual restart. When a session's
+Claude Code state directory is readable, the detail
 panel also shows the session id, model, token totals, estimated cost, and what
 a waiting session waits for; those totals come from tailing the transcript for
 accounting fields only. A Claude session started outside herdr (a plain shell)
-still appears in the list, marked unmanaged and listed without controls. herdr-core has no approve call, so approval presses
-Enter and denial presses Escape. Starting an agent means
-running a command line in a directory, usually a worktree path; herdr-core has
-no workspace object of its own.
+still appears in the list, marked unmanaged and listed without controls.
+herdr-core has no approve call, so approval presses Enter and denial presses
+Escape. Starting an agent means running a command line in a directory, usually
+a worktree path; herdr-core has no workspace object of its own.
 
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
