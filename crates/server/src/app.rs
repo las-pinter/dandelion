@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use crate::{
     agents, auth, containers, health, metrics, openapi, processes, services, state::AppState,
-    static_files, terminal, ws,
+    static_files, terminal, transcript, ws,
 };
 
 /// Error body returned by API routes.
@@ -78,6 +78,7 @@ fn protected_routes() -> Router<AppState> {
         .nest("/containers", containers::router())
         .nest("/terminals", terminal::router())
         .nest("/agents", agents::router())
+        .nest("/claude", transcript::router())
         .route("/ws", get(ws::handler))
 }
 

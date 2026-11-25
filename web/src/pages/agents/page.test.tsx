@@ -10,6 +10,16 @@ const { useAgents } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/hooks/use-agents', () => ({ useAgents }))
+vi.mock('@/hooks/use-transcript', () => ({
+  useTranscript: () => ({
+    records: [],
+    subagents: [],
+    hasEarlier: false,
+    loading: false,
+    error: null,
+    loadEarlier: () => undefined,
+  }),
+}))
 vi.mock('@/components/XtermPane/XtermPane', () => ({
   XtermPane: ({ url }: { url: string }) => <div data-testid="xterm-pane">{url}</div>,
 }))
@@ -180,5 +190,25 @@ describe('AgentsPage', () => {
     expect(page.path).toBe('/agents')
     expect(page.title).toBe('Agents')
     expect(page.order).toBe(1)
+  })
+})
+
+describe('AgentsPage unmanaged sessions', () => {
+  it('opens an unmanaged session transcript read-only', async () => {
+    const plain: ClaudeAgent = {
+      ...claude,
+      terminal: null,
+      sessionId: 'plain-1',
+      cwd: '/tmp/plain-shell',
+      name: null,
+      agent: null,
+    }
+    useAgents.mockReturnValue(state({ snapshot: { ...snapshot, claude: [claude, plain] } }))
+
+    render(<AgentsPage />)
+    await userEvent.click(screen.getByRole('button', { name: /plain-1/ }))
+
+    expect(screen.getByLabelText('Transcript')).toBeInTheDocument()
+    expect(screen.getByText('No messages yet.')).toBeInTheDocument()
   })
 })

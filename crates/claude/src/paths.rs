@@ -65,6 +65,12 @@ impl ClaudePaths {
     pub fn proc_root(&self) -> &Path {
         &self.proc_root
     }
+
+    /// The transcript file for a session started in `cwd`, when it exists.
+    #[must_use]
+    pub fn transcript(&self, session_id: &str, cwd: &str) -> Option<PathBuf> {
+        find_transcript(self, session_id, cwd)
+    }
 }
 
 /// The project-directory name Claude Code derives from a working directory.

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/Panel/Panel'
+import { TranscriptPanel } from '@/components/TranscriptPanel/TranscriptPanel'
 import { StatusPill } from '@/components/StatusPill/StatusPill'
 import { XtermPane } from '@/components/XtermPane/XtermPane'
 import {
@@ -37,6 +38,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
   const [prompt, setPrompt] = useState('')
   const [confirmKill, setConfirmKill] = useState(false)
   const [paneError, setPaneError] = useState<string | null>(null)
+  const [view, setView] = useState<'terminal' | 'transcript'>('terminal')
   const promptId = useId()
   const status = uiStatus(agent)
   const blocked = blockedLabel(agent.agent_state)
@@ -141,16 +143,43 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
           Send
         </Button>
       </form>
-      <div className="h-80 overflow-hidden rounded-lg border bg-background">
-        <XtermPane
-          url={agentSocketUrl(agent.id)}
-          readOnly
-          onClosedWithoutOpen={(reason) =>
-            setPaneError(reason ?? 'the agent pane could not attach')
-          }
-        />
-      </div>
-      {paneError && (
+      {claude ? (
+        <div aria-label="Agent view" className="mb-2 flex gap-1">
+          <Button
+            size="xs"
+            aria-pressed={view === 'terminal'}
+            variant={view === 'terminal' ? 'secondary' : 'ghost'}
+            onClick={() => {
+              setView('terminal')
+              setPaneError(null)
+            }}
+          >
+            Terminal
+          </Button>
+          <Button
+            size="xs"
+            aria-pressed={view === 'transcript'}
+            variant={view === 'transcript' ? 'secondary' : 'ghost'}
+            onClick={() => setView('transcript')}
+          >
+            Transcript
+          </Button>
+        </div>
+      ) : null}
+      {view === 'transcript' && claude ? (
+        <TranscriptPanel sessionId={claude.sessionId} className="h-80" />
+      ) : (
+        <div className="h-80 overflow-hidden rounded-lg border bg-background">
+          <XtermPane
+            url={agentSocketUrl(agent.id)}
+            readOnly
+            onClosedWithoutOpen={(reason) =>
+              setPaneError(reason ?? 'the agent pane could not attach')
+            }
+          />
+        </div>
+      )}
+      {!(view === 'transcript' && claude) && paneError && (
         <p role="alert" className="mt-2 text-xs text-destructive">
           {paneError}
         </p>

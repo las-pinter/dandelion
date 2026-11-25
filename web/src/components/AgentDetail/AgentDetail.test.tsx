@@ -4,6 +4,17 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AgentAction, AgentInfo, ClaudeAgent } from '@/lib/agents'
 import { AgentDetail } from './AgentDetail'
 
+vi.mock('@/hooks/use-transcript', () => ({
+  useTranscript: () => ({
+    records: [],
+    subagents: [],
+    hasEarlier: false,
+    loading: false,
+    error: null,
+    loadEarlier: () => undefined,
+  }),
+}))
+
 vi.mock('@/components/XtermPane/XtermPane', () => ({
   XtermPane: ({
     url,
@@ -155,5 +166,18 @@ describe('AgentDetail', () => {
     render(<AgentDetail agent={blocked} busy="t7:approve" onAct={onAct} />)
 
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled()
+  })
+})
+
+describe('AgentDetail transcript tab', () => {
+  it('opens the rendered transcript beside the terminal', async () => {
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Transcript' }))
+
+    expect(screen.getByLabelText('Transcript')).toBeInTheDocument()
+    expect(screen.getByText('No messages yet.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Terminal' }))
+    expect(screen.getByTestId('xterm-pane')).toBeInTheDocument()
   })
 })

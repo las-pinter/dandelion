@@ -4,18 +4,25 @@ import type { PageDefinition } from '@/app/page-registry'
 import { AgentDetail } from '@/components/AgentDetail/AgentDetail'
 import { AgentList } from '@/components/AgentList/AgentList'
 import { Panel } from '@/components/Panel/Panel'
+import { TranscriptPanel } from '@/components/TranscriptPanel/TranscriptPanel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAgents } from '@/hooks/use-agents'
-import { claudeFor, unmanagedSessions, type AgentAction } from '@/lib/agents'
+import { claudeFor, claudeLabel, unmanagedSessions, type AgentAction } from '@/lib/agents'
 
 export function AgentsPage() {
   const { snapshot, loading, error, busy, refresh, act, spawn } = useAgents()
   const agents = snapshot?.agents ?? []
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const selected = agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null
-  const claude = claudeFor(snapshot?.claude, selected?.id)
   const unmanaged = unmanagedSessions(snapshot?.claude)
+  const unmanagedSelected =
+    selectedId?.startsWith('claude:') === true
+      ? (unmanaged.find((entry) => `claude:${entry.sessionId}` === selectedId) ?? null)
+      : null
+  const selected = unmanagedSelected
+    ? null
+    : (agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null)
+  const claude = claudeFor(snapshot?.claude, selected?.id)
 
   const [line, setLine] = useState('claude')
   const [cwd, setCwd] = useState('')
@@ -68,7 +75,9 @@ export function AgentsPage() {
           <AgentList
             agents={agents}
             unmanaged={unmanaged}
-            selectedId={selected?.id ?? null}
+            selectedId={
+              unmanagedSelected ? `claude:${unmanagedSelected.sessionId}` : (selected?.id ?? null)
+            }
             onSelect={setSelectedId}
           />
         )}
@@ -82,6 +91,15 @@ export function AgentsPage() {
           busy={busy}
           onAct={actOnSelected}
         />
+      )}
+
+      {unmanagedSelected && (
+        <Panel
+          title={claudeLabel(unmanagedSelected)}
+          description={`Unmanaged Claude Code session · ${unmanagedSelected.cwd || 'unknown directory'}`}
+        >
+          <TranscriptPanel sessionId={unmanagedSelected.sessionId} />
+        </Panel>
       )}
 
       <Panel

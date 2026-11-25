@@ -109,6 +109,22 @@ reports a size, and `{"type":"closed","reason":…}` or
 never read: herdr-core scrolls a full-screen program to stitch it, and
 scrolling is input to that program.
 
+## Transcript socket
+
+`GET /api/claude/{session}/transcript/ws` streams Claude Code's own transcript
+file for the Transcript tab; `?agent=<id>` selects one subagent file. The
+handshake, session recheck, and logout close match the other sockets; browser
+input frames are capped at 16 KiB, and each server frame write has a 5 s
+timeout (appends are chunked at 200 records). A replaced file sends a fresh
+capped `page`. Server frames are JSON text: `{"type":"page","records":[…],
+"start":N,"hasEarlier":bool}` at open, `{"type":"appended","records":[…]}` while
+tailing, `{"type":"earlier",…}` for an older page, `{"type":"subagents",
+"items":[…]}` at open of every socket and again when the list changes (a run's
+metadata appears after its Task call), and `{"type":"error","message":…}`. The
+client sends only `{"type":"earlier"}`; the server owns the cursor. Records
+are bounded at 8 KiB per text block, nothing is stored, and the raw terminal
+stays the ground truth (ADR-0006).
+
 ## Tests
 
 `crates/server/tests/ws.rs` proves the handshake auth and origin checks

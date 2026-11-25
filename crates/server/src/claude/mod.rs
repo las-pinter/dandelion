@@ -132,6 +132,21 @@ impl ClaudeMonitor {
         self.inner.is_some()
     }
 
+    /// Locates a known session's transcript file.
+    ///
+    /// Returns `None` for an unknown session, an unreadable state directory,
+    /// or a transcript that is not on disk.
+    #[must_use]
+    pub fn transcript_path(&self, session_id: &str) -> Option<std::path::PathBuf> {
+        let inner = self.inner.as_ref()?;
+        let cwd = self
+            .snapshot()
+            .into_iter()
+            .find(|agent| agent.session_id == session_id)
+            .map(|agent| agent.cwd)?;
+        inner.paths.transcript(session_id, &cwd)
+    }
+
     /// The cached sessions, sorted by terminal then session id.
     ///
     /// Takes the cache lock for a clone only; it never waits on file I/O.

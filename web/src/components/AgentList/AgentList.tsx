@@ -69,7 +69,14 @@ export function AgentList({ agents, unmanaged = [], selectedId, onSelect }: Agen
           {unmanaged.map((session) => (
             <tr key={session.sessionId}>
               <td className="py-2 pr-3">
-                <span className="font-medium">{claudeLabel(session)}</span>
+                <button
+                  type="button"
+                  aria-pressed={selectedId === `claude:${session.sessionId}`}
+                  className="text-left font-medium hover:underline aria-pressed:text-primary"
+                  onClick={() => onSelect(`claude:${session.sessionId}`)}
+                >
+                  {claudeLabel(session)}
+                </button>
                 <span className="block text-xs text-muted-foreground">
                   {session.agent ?? 'agent'} · {session.sessionId.slice(0, 8)} ·{' '}
                   <span className="text-status-waiting">unmanaged</span>

@@ -32,8 +32,18 @@ pub const TERMINAL: &str = "t7";
 /// A synthetic Claude state directory with one waiting session in `t7`.
 pub struct ClaudeFixture {
     /// Keeps the directory alive for the monitor's lifetime.
-    _directory: tempfile::TempDir,
+    pub directory: tempfile::TempDir,
     pub monitor: ClaudeMonitor,
+}
+
+impl ClaudeFixture {
+    /// The transcript file the fixture session writes.
+    #[must_use]
+    pub fn transcript(&self) -> std::path::PathBuf {
+        self.directory
+            .path()
+            .join("claude/projects/-work-example/session-424242.jsonl")
+    }
 }
 
 pub fn claude_fixture() -> ClaudeFixture {
@@ -59,11 +69,27 @@ pub fn claude_fixture() -> ClaudeFixture {
     fs::write(
         project.join("session-424242.jsonl"),
         concat!(
-            r#"{"type":"assistant","message":{"id":"msg_1","model":"claude-opus-5-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":100,"cache_creation_input_tokens":2}}}"#,
+            r#"{"type":"user","message":{"role":"user","content":"hello there"}}"#,
+            "\n",
+            r#"{"type":"assistant","message":{"id":"msg_1","content":[{"type":"text","text":"on it"}],"model":"claude-opus-5-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":100,"cache_creation_input_tokens":2}}}"#,
             "\n"
         ),
     )
     .expect("transcript");
+
+    // One subagent run, so the transcript socket can list it.
+    let subagents = project.join("session-424242").join("subagents");
+    fs::create_dir_all(&subagents).expect("subagent dir");
+    fs::write(
+        subagents.join("agent-a1.jsonl"),
+        "{\"type\":\"user\",\"message\":{\"content\":\"sub work\"}}\n",
+    )
+    .expect("subagent transcript");
+    fs::write(
+        subagents.join("agent-a1.meta.json"),
+        r#"{"toolUseId":"toolu_x","description":"probe","finished":true}"#,
+    )
+    .expect("subagent meta");
 
     let proc_root = temporary.path().join("proc");
     let proc_dir = proc_root.join("424242");
@@ -90,7 +116,7 @@ pub fn claude_fixture() -> ClaudeFixture {
 
     let paths = ClaudePaths::new(&claude_dir).with_proc_root(&proc_root);
     ClaudeFixture {
-        _directory: temporary,
+        directory: temporary,
         monitor: ClaudeMonitor::from_paths(paths),
     }
 }

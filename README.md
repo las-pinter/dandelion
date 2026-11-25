@@ -153,12 +153,16 @@ interrupts, kills, or starts a new agent in a working directory. The pane is
 read-only: viewing must not resize the agent's real terminal, so control goes
 through the audited action API. State changes arrive on the `agents` WebSocket
 topic. If no terminal backend answers at startup, a background retry adopts
-one when it appears, so a reboot needs no manual restart. When a session's
-Claude Code state directory is readable, the detail
+one when it appears, so a reboot needs no manual restart. A session with a
+discoverable transcript gets a Transcript tab beside the pane: rendered
+markdown, collapsed thinking and tool calls, and nested subagents, streamed
+read-only from Claude Code's file and never stored. When a session's Claude
+Code state directory is readable, the detail
 panel also shows the session id, model, token totals, estimated cost, and what
 a waiting session waits for; those totals come from tailing the transcript for
 accounting fields only. A Claude session started outside herdr (a plain shell)
-still appears in the list, marked unmanaged and listed without controls.
+still appears in the list, marked unmanaged, without controls; selecting one
+shows its transcript and nothing else.
 herdr-core has no approve call, so approval presses Enter and denial presses
 Escape. Starting an agent means running a command line in a directory, usually
 a worktree path; herdr-core has no workspace object of its own.
