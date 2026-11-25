@@ -15,6 +15,8 @@ export default defineConfig({
     proxy: { '/api': { target: 'http://127.0.0.1:7443', ws: true } },
   },
   test: {
+    // Only unit tests live in src; e2e specs belong to the Playwright runner.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

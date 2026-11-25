@@ -32,4 +32,6 @@ jobs:
         with:
           tool: just,cargo-nextest,cargo-deny
       - run: pnpm --dir web install --frozen-lockfile
+      - name: Playwright browser
+        run: pnpm --dir web exec playwright install --with-deps chromium
       - run: just ci

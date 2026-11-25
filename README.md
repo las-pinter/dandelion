@@ -15,13 +15,25 @@ corepack (pnpm), [`just`](https://github.com/casey/just), `cargo-nextest`,
 
 ```sh
 just setup   # install web dependencies and git hooks
-just ci      # the full gate: format, typecheck, lint, test, build
+just ci      # the full gate: format, typecheck, lint, test, build, e2e
+just e2e     # Playwright smoke suite against a scratch server on port 7444
 just gen     # regenerate the OpenAPI document and the TypeScript client
 just         # list every command
 ```
 
+The end-to-end suite drives Chromium against a real server and a scratch data
+directory under `target/`: it completes the setup ceremony with a browser
+virtual authenticator, checks the dashboard's live stream, and signs in with
+the password. A fresh Linux needs the browser's system libraries once:
+`pnpm --dir web exec playwright install --with-deps chromium`.
+
+Releases are built by CI from a `v*` tag: the workflow runs `just release` and
+attaches the binary and its checksum to the GitHub release.
+
 The server listens on `http://127.0.0.1:7443` and serves `GET /api/health`.
 `just dev-web` proxies `/api` there. Non-loopback bind addresses are refused.
+The app registers a lifecycle-only service worker, so it can be installed to
+a home screen; nothing is cached and no request is intercepted.
 
 ## Install and operations
 
