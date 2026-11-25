@@ -63,21 +63,39 @@ pub async fn open(path: &Path) -> Result<SqlitePool, StorageError> {
         }
     }
 
-    let options = SqliteConnectOptions::new()
-        .filename(path)
-        .create_if_missing(true)
-        .journal_mode(SqliteJournalMode::Wal)
-        .foreign_keys(true)
-        .busy_timeout(Duration::from_secs(5));
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect_with(options)
+        .connect_with(connect_options(path, true))
         .await?;
 
     // Set this before migrations create the WAL and SHM sidecars.
     restrict(path, 0o600).await?;
     migrate(&pool).await?;
     Ok(pool)
+}
+
+/// Opens an existing database without creating it or applying migrations.
+///
+/// A backup runs in its own process while the server is serving. Applying a
+/// pending migration there would change the live schema under the running
+/// server and contradict what `dandelion backup` claims to do, so this opener
+/// never migrates and never creates the database file. It does open in WAL
+/// mode, which may create `-wal`/`-shm` sidecars beside the file.
+pub async fn connect_existing(path: &Path) -> Result<SqlitePool, StorageError> {
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(connect_options(path, false))
+        .await?;
+    Ok(pool)
+}
+
+fn connect_options(path: &Path, create_if_missing: bool) -> SqliteConnectOptions {
+    SqliteConnectOptions::new()
+        .filename(path)
+        .create_if_missing(create_if_missing)
+        .journal_mode(SqliteJournalMode::Wal)
+        .foreign_keys(true)
+        .busy_timeout(Duration::from_secs(5))
 }
 
 #[cfg(unix)]

@@ -1,0 +1,7 @@
+[Unit]
+Description=Dandelion database backup
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/dandelion backup
+EnvironmentFile=-%h/.config/dandelion/env

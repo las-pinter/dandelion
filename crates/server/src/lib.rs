@@ -7,6 +7,7 @@ pub mod agents;
 pub mod app;
 pub mod audit;
 pub mod auth;
+pub mod backup;
 pub mod claude;
 pub mod config;
 pub mod containers;

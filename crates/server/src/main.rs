@@ -2,6 +2,7 @@
 
 use std::{
     net::SocketAddr,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
 };
 
@@ -19,6 +20,7 @@ use dandelion_server::{
         store::AuthStore,
         token::{hash_token, random_token},
     },
+    backup::{self, DEFAULT_KEEP},
     claude::ClaudeMonitor,
     config::{self, BindAddr},
     containers::Containers,
@@ -80,6 +82,18 @@ enum Command {
         #[arg(long)]
         user: Option<String>,
     },
+    /// Copy the live database to a consistent backup.
+    Backup {
+        /// Data directory that holds the database.
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
+        /// Destination directory; defaults to `<data-dir>/backups`.
+        #[arg(long)]
+        out_dir: Option<PathBuf>,
+        /// How many backups to keep, newest first.
+        #[arg(long, default_value_t = DEFAULT_KEEP)]
+        keep: NonZeroUsize,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -105,6 +119,11 @@ async fn main() -> Result<()> {
         Some(Command::TsTypes { out_dir }) => export_ts_types(&out_dir),
         Some(Command::Assets) => check_assets(),
         Some(Command::Sudoers { data_dir, user }) => print_sudoers(data_dir, user),
+        Some(Command::Backup {
+            data_dir,
+            out_dir,
+            keep,
+        }) => run_backup(data_dir, out_dir, keep).await,
     }
 }
 
@@ -219,6 +238,19 @@ fn print_sudoers(data_dir: Option<PathBuf>, user: Option<String>) -> Result<()> 
         .filter(|value| !value.is_empty())
         .context("pass --user or set USER")?;
     print!("{}", services::sudoers_drop_in(&allowlist, &user)?);
+    Ok(())
+}
+
+async fn run_backup(
+    data_dir: Option<PathBuf>,
+    out_dir: Option<PathBuf>,
+    keep: NonZeroUsize,
+) -> Result<()> {
+    let data_dir = config::data_dir(data_dir)?;
+    let path = backup::backup_database(&data_dir, out_dir.as_deref(), keep)
+        .await
+        .context("back up the database")?;
+    println!("backup written: {}", path.display());
     Ok(())
 }
 
@@ -381,6 +413,22 @@ mod tests {
     #[test]
     fn auth_requires_a_subcommand() {
         assert!(Cli::try_parse_from(["dandelion", "auth"]).is_err());
+    }
+
+    #[test]
+    fn backup_defaults_to_seven_copies() {
+        let cli = Cli::try_parse_from(["dandelion", "backup"]).expect("cli parses");
+        let Some(Command::Backup { keep, out_dir, .. }) = cli.command else {
+            panic!("backup subcommand expected");
+        };
+
+        assert_eq!(keep.get(), 7);
+        assert!(out_dir.is_none());
+    }
+
+    #[test]
+    fn backup_rejects_keeping_nothing() {
+        assert!(Cli::try_parse_from(["dandelion", "backup", "--keep", "0"]).is_err());
     }
 
     #[test]
