@@ -131,6 +131,7 @@ pub enum Behaviour {
 #[derive(Debug, Default)]
 pub struct Recorded {
     pub texts: Vec<(String, String)>,
+    pub send_options: Vec<SendOptions>,
     pub keys: Vec<(String, Vec<String>)>,
     pub interrupted: Vec<String>,
     pub killed: Vec<String>,
@@ -271,18 +272,20 @@ impl TerminalBackend for FakeBackend {
         &self,
         id: &TerminalId,
         text: &str,
-        _options: SendOptions,
+        options: SendOptions,
     ) -> Result<SendOutcome, TerminalError> {
         match self.behaviour {
-            Behaviour::Blocked => return Err(TerminalError::Blocked("permission".to_owned())),
+            // herdr refuses a blocked program unless the caller forces the
+            // send, which is what answering a dialog does.
+            Behaviour::Blocked if !options.force => {
+                return Err(TerminalError::Blocked("permission".to_owned()));
+            }
             Behaviour::Missing => return Err(TerminalError::NotFound(id.to_string())),
-            Behaviour::Normal => {}
+            Behaviour::Normal | Behaviour::Blocked => {}
         }
-        self.recorded
-            .lock()
-            .expect("recorded")
-            .texts
-            .push((id.to_string(), text.to_owned()));
+        let mut recorded = self.recorded.lock().expect("recorded");
+        recorded.texts.push((id.to_string(), text.to_owned()));
+        recorded.send_options.push(options);
         Ok(SendOutcome {
             started: Some(true),
             status: None,

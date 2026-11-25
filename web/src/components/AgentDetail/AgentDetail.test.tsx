@@ -196,15 +196,30 @@ describe('AgentDetail', () => {
   })
 })
 
-describe('AgentDetail transcript tab', () => {
-  it('opens the rendered transcript beside the terminal', async () => {
+describe('AgentDetail chat surface', () => {
+  it('shows the transcript and the live strip together', () => {
     render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Transcript' }))
-
-    expect(screen.getByLabelText('Transcript')).toBeInTheDocument()
-    expect(screen.getByText('No messages yet.')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Terminal' }))
+    expect(screen.getByRole('log', { name: 'Transcript' })).toBeInTheDocument()
     expect(screen.getByTestId('xterm-pane')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Terminal' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Transcript' })).toBeNull()
+  })
+
+  it('swaps the prompt for the answer bar on a question', () => {
+    render(
+      <AgentDetail
+        agent={{
+          ...blocked,
+          agent_state: { state: 'blocked', blocked_reason: 'question', progress: null },
+        }}
+        onAct={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('form', { name: 'Answer the question' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Prompt')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Interrupt' })).toBeInTheDocument()
   })
 })

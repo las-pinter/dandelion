@@ -8,8 +8,8 @@ import { expect, test, type Page } from '@playwright/test'
  * stream, navigation, and password sign-in. Nothing is mocked, and the
  * scratch data directory comes from `just e2e`.
  *
- * The transcript tab is not covered here: it needs a live Claude Code
- * session, so the owner proves it by hand.
+ * The agent chat and its transcript are not covered here: they need a live
+ * Claude Code session, so the owner proves them by hand.
  */
 
 const PASSWORD = 'dandelion e2e password'

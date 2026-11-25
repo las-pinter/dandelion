@@ -6,7 +6,7 @@
 //! terminals that report an agent kind. State changes ride the `agents` hub
 //! topic; output rides a per-agent attach socket, because the hub carries
 //! JSON only. Every mutating request writes exactly one audit row; the typed
-//! prompt and the keys are never audited.
+//! prompt, the answer text, and the keys are never audited.
 
 mod backend;
 mod publisher;
@@ -103,6 +103,14 @@ pub enum AgentAction {
         /// Key names the crate understands.
         keys: Vec<String>,
     },
+    /// Types an answer into a dialog that is blocking the agent.
+    ///
+    /// Unlike [`Self::Prompt`] this is forced: herdr refuses a send to a
+    /// blocked program unless the caller says it is answering the block.
+    Answer {
+        /// The answer text.
+        text: String,
+    },
     /// Answers a permission prompt with Enter.
     Approve,
     /// Answers a permission prompt with Escape.
@@ -120,6 +128,7 @@ impl AgentAction {
         match self {
             Self::Prompt { .. } => "prompt",
             Self::Keys { .. } => "keys",
+            Self::Answer { .. } => "answer",
             Self::Approve => "approve",
             Self::Deny => "deny",
             Self::Interrupt => "interrupt",
@@ -296,6 +305,13 @@ impl Agents {
                     .map(|key| KeyName::new(key.clone()))
                     .collect::<Result<Vec<_>, _>>()?;
                 backend.send_keys(&id, &keys).await?;
+            }
+            AgentAction::Answer { text } => {
+                let options = SendOptions {
+                    force: true,
+                    ..SendOptions::default()
+                };
+                backend.send_text(&id, text, options).await?;
             }
             AgentAction::Approve => {
                 backend.send_keys(&id, &[KeyName::enter()]).await?;

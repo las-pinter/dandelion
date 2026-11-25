@@ -161,12 +161,17 @@ open at once.
 The Agents page lists live agents from herdr-core (classic herdr is the
 fallback), shows each one's state and blocked reason, streams its pane over a
 dedicated socket, and sends a prompt, approves or denies a waiting prompt,
-interrupts, kills, or starts a new agent in a working directory. The pane is
-read-only: viewing must not resize the agent's real terminal, so control goes
-through the audited action API. State changes arrive on the `agents` WebSocket
-topic. If no terminal backend answers at startup, a background retry adopts
-one when it appears, so a reboot needs no manual restart. A session with a
-discoverable transcript gets a Transcript tab beside the pane: rendered
+interrupts, kills, or starts a new agent in a working directory. A selected
+agent is one chat surface: the transcript as history, the live terminal strip
+where the turn happens, and the prompt at the bottom. The strip opens when a
+prompt is sent, stays while the agent works, is blocked, or has failed, and
+collapses once it is idle or done; a toggle shows or hides it at any time. The
+pane is read-only:
+viewing must not resize the agent's real terminal, so control goes through the
+audited action API. State changes arrive on the `agents` WebSocket topic. If no
+terminal backend answers at startup, a background retry adopts one when it
+appears, so a reboot needs no manual restart. A session with a
+discoverable transcript renders it in the chat: rendered
 markdown, collapsed thinking and tool calls, and nested subagents, streamed
 read-only from Claude Code's file and never stored. When a session's Claude
 Code state directory is readable, the detail
@@ -176,8 +181,13 @@ accounting fields only. A Claude session started outside herdr (a plain shell)
 still appears in the list, marked unmanaged, without controls; selecting one
 shows its transcript and nothing else.
 herdr-core has no approve call, so approval presses Enter and denial presses
-Escape. Starting an agent means running a command line in a directory, usually
-a worktree path; herdr-core has no workspace object of its own.
+Escape. When the agent is blocked on a question, the prompt box gives way to an
+answer bar: Up and Down move the highlight, Accept sends Enter, Skip sends
+Escape, and a typed answer is forced into the dialog through the `answer`
+action. That action is audited with its target only; the typed answer is never
+stored, like every other typed input. Starting an agent means running a
+command line in a directory, usually a worktree path; herdr-core has no
+workspace object of its own.
 
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).

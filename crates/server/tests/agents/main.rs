@@ -210,12 +210,49 @@ async fn a_prompt_is_sent_and_audited() {
             recorded.texts,
             vec![(TERMINAL.to_owned(), "run the tests".to_owned())]
         );
+        assert!(
+            !recorded.send_options[0].force,
+            "a prompt must not be forced past the blocked guard"
+        );
     }
     let (action, target, detail) = one_audit_row(&state).await;
     assert_eq!(action, "agent.action");
     assert_eq!(target, format!("terminal:{TERMINAL}"));
     assert_eq!(detail["kind"], "prompt");
     assert_eq!(detail["outcome"], "ok");
+}
+
+#[tokio::test]
+async fn an_answer_is_forced_past_a_blocked_agent_and_never_audited() {
+    let backend = FakeBackend::new(Behaviour::Blocked);
+    let state = agents_state(&backend).await;
+    let cookie = session_cookie(&state).await;
+
+    let response = act(
+        &state,
+        &cookie,
+        json!({"kind": "answer", "text": "keep-the-answer-private"}),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    {
+        let recorded = backend.recorded.lock().expect("recorded");
+        assert_eq!(
+            recorded.texts,
+            vec![(TERMINAL.to_owned(), "keep-the-answer-private".to_owned())]
+        );
+        assert!(recorded.send_options[0].force);
+    }
+    let (action, target, detail) = one_audit_row(&state).await;
+    assert_eq!(action, "agent.answer");
+    assert_eq!(target, format!("terminal:{TERMINAL}"));
+    assert_eq!(detail["kind"], "answer");
+    assert_eq!(detail["outcome"], "ok");
+    assert!(
+        !detail.to_string().contains("keep-the-answer"),
+        "the answer text must not reach the audit log"
+    );
 }
 
 #[tokio::test]

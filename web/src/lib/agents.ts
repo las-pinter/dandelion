@@ -140,3 +140,20 @@ export function blockedLabel(status: AgentStatusInfo | null | undefined): string
       return null
   }
 }
+
+/** Whether the agent is blocked on a question, which the answer bar handles. */
+export function asksQuestion(status: AgentStatusInfo | null | undefined): boolean {
+  return status?.state === 'blocked' && status.blocked_reason === 'question'
+}
+
+/** The live terminal strip's visibility, as the owner chose it or the turn dictates. */
+export function showLiveStrip(
+  status: AgentStatusInfo | null | undefined,
+  choice: 'auto' | 'shown' | 'hidden',
+): boolean {
+  if (choice !== 'auto') return choice === 'shown'
+  // Anything but a settled agent is a turn worth watching; an agent that never
+  // reported has no turn at all.
+  if (!status?.state) return false
+  return status.state !== 'idle' && status.state !== 'done'
+}

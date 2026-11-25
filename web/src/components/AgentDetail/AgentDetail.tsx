@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AgentChat } from '@/components/AgentChat/AgentChat'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -8,15 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/Panel/Panel'
-import { TranscriptPanel } from '@/components/TranscriptPanel/TranscriptPanel'
 import { StatusPill } from '@/components/StatusPill/StatusPill'
-import { XtermPane } from '@/components/XtermPane/XtermPane'
-import { cn } from '@/lib/utils'
 import {
   agentLabel,
-  agentSocketUrl,
+  asksQuestion,
   blockedLabel,
   claudeSummary,
   uiStatus,
@@ -34,17 +31,14 @@ export interface AgentDetailProps {
   onAct: (action: AgentAction) => void
 }
 
-/** One agent: its live pane, the prompt box, and the control buttons. */
+/** One agent: its status, the controls, and the chat surface. */
 export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
-  const [prompt, setPrompt] = useState('')
   const [confirmKill, setConfirmKill] = useState(false)
-  const [paneError, setPaneError] = useState<string | null>(null)
-  const [view, setView] = useState<'terminal' | 'transcript'>('terminal')
   const [expanded, setExpanded] = useState(false)
   const overlay = useRef<HTMLDivElement>(null)
-  const promptId = useId()
   const status = uiStatus(agent)
   const blocked = blockedLabel(agent.agent_state)
+  const question = asksQuestion(agent.agent_state)
   const session = claude ? claudeSummary(claude) : null
   const inFlight = (kind: string) => busy === `${agent.id}:${kind}`
 
@@ -76,14 +70,6 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [expanded])
-
-  const showTranscript = view === 'transcript' && claude !== null
-
-  const send = () => {
-    if (prompt.trim() === '') return
-    onAct({ kind: 'prompt', text: prompt })
-    setPrompt('')
-  }
 
   return (
     <Panel
@@ -124,22 +110,26 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
         </dl>
       )}
       <div className="mb-3 flex flex-wrap gap-1">
-        <Button
-          size="xs"
-          disabled={inFlight('approve') || !blocked}
-          title={blocked ? undefined : 'no prompt is waiting'}
-          onClick={() => onAct({ kind: 'approve' })}
-        >
-          Approve
-        </Button>
-        <Button
-          size="xs"
-          variant="outline"
-          disabled={inFlight('deny') || !blocked}
-          onClick={() => onAct({ kind: 'deny' })}
-        >
-          Deny
-        </Button>
+        {!question && (
+          <>
+            <Button
+              size="xs"
+              disabled={inFlight('approve') || !blocked}
+              title={blocked ? undefined : 'no prompt is waiting'}
+              onClick={() => onAct({ kind: 'approve' })}
+            >
+              Approve
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={inFlight('deny') || !blocked}
+              onClick={() => onAct({ kind: 'deny' })}
+            >
+              Deny
+            </Button>
+          </>
+        )}
         <Button
           size="xs"
           variant="outline"
@@ -157,26 +147,6 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
           Kill
         </Button>
       </div>
-      <form
-        className="mb-3 flex gap-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          send()
-        }}
-      >
-        <label htmlFor={promptId} className="sr-only">
-          Prompt
-        </label>
-        <Input
-          id={promptId}
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          placeholder="Send a prompt to this agent"
-        />
-        <Button type="submit" size="sm" disabled={inFlight('prompt') || prompt.trim() === ''}>
-          Send
-        </Button>
-      </form>
       <div
         ref={overlay}
         role={expanded ? 'dialog' : undefined}
@@ -188,61 +158,19 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
             : 'flex flex-col gap-2'
         }
       >
-        <div role="group" aria-label="Agent view" className="flex items-center gap-1">
-          {claude && (
-            <>
-              <Button
-                size="xs"
-                aria-pressed={view === 'terminal'}
-                variant={view === 'terminal' ? 'secondary' : 'ghost'}
-                onClick={() => {
-                  setView('terminal')
-                  setPaneError(null)
-                }}
-              >
-                Terminal
-              </Button>
-              <Button
-                size="xs"
-                aria-pressed={view === 'transcript'}
-                variant={view === 'transcript' ? 'secondary' : 'ghost'}
-                onClick={() => setView('transcript')}
-              >
-                Transcript
-              </Button>
-            </>
-          )}
+        <div className="flex items-center gap-2">
           <span className="flex-1" />
           <Button size="xs" variant="ghost" onClick={() => setExpanded((open) => !open)}>
             {expanded ? 'Exit full screen' : 'Full screen'}
           </Button>
         </div>
-        {showTranscript && claude ? (
-          <TranscriptPanel
-            sessionId={claude.sessionId}
-            className={expanded ? 'min-h-0 flex-1' : 'h-[60vh] sm:h-96'}
-          />
-        ) : (
-          <div
-            className={cn(
-              'overflow-hidden rounded-lg border bg-background',
-              expanded ? 'min-h-0 flex-1' : 'h-[60vh] sm:h-96',
-            )}
-          >
-            <XtermPane
-              url={agentSocketUrl(agent.id)}
-              readOnly
-              onClosedWithoutOpen={(reason) =>
-                setPaneError(reason ?? 'the agent pane could not attach')
-              }
-            />
-          </div>
-        )}
-        {!showTranscript && paneError && (
-          <p role="alert" className="text-xs text-destructive">
-            {paneError}
-          </p>
-        )}
+        <AgentChat
+          agent={agent}
+          claude={claude}
+          busy={busy}
+          onAct={onAct}
+          className={expanded ? 'h-auto min-h-0 flex-1' : undefined}
+        />
       </div>
 
       <Dialog open={confirmKill} onOpenChange={setConfirmKill}>

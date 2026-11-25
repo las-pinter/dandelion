@@ -546,6 +546,11 @@ export interface components {
             kind: "keys";
         } | {
             /** @enum {string} */
+            kind: "answer";
+            /** @description The answer text. */
+            text: string;
+        } | {
+            /** @enum {string} */
             kind: "approve";
         } | {
             /** @enum {string} */
