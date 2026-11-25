@@ -87,12 +87,56 @@ test:
 deny:
     cargo deny check
 
-# Production build: web bundle, Storybook (as a check), then the release binary.
-build:
-    {{web}} build
+# Production build: the release bundle plus the Storybook check.
+build: release
     {{web}} build-storybook --quiet --output-dir dist-storybook
+
+# Production build without the Storybook check; used by install and deploy.
+release:
+    {{web}} build
     cargo build --release --locked
     ./target/release/dandelion assets
+
+# Install the systemd user units; run by install and deploy.
+install-units:
+    install -Dm0644 packaging/dandelion.service ~/.config/systemd/user/dandelion.service
+    install -Dm0644 packaging/dandelion-backup.service ~/.config/systemd/user/dandelion-backup.service
+    install -Dm0644 packaging/dandelion-backup.timer ~/.config/systemd/user/dandelion-backup.timer
+    systemctl --user daemon-reload
+
+# Install (or reinstall) the systemd user service; keeps data and settings.
+install: release install-units
+    install -Dm0755 target/release/dandelion ~/.local/bin/dandelion
+    install -d -m0700 ~/.config/dandelion
+    test -f ~/.config/dandelion/env || install -m0600 packaging/env.example ~/.config/dandelion/env
+    systemctl --user enable dandelion.service
+    systemctl --user restart dandelion.service
+    systemctl --user enable --now dandelion-backup.timer
+    curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:7443/api/health
+    @echo
+    @loginctl show-user $USER -p Linger --value | grep -qx yes || echo "before a reboot works: sudo loginctl enable-linger $USER"
+    @echo "Optional: just install-sudoers for system-unit actions; restart the service after changing the allowlist."
+
+# Upgrade an installed server: rebuild, back up, replace the binary, restart.
+deploy: release install-units
+    @set -a; [ -r ~/.config/dandelion/env ] && . ~/.config/dandelion/env; set +a; ./target/release/dandelion backup
+    install -Dm0755 target/release/dandelion ~/.local/bin/dandelion
+    systemctl --user restart dandelion.service
+    curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:7443/api/health
+    @echo
+
+# Remove the units and the binary; keeps data and settings.
+uninstall:
+    -systemctl --user disable --now dandelion-backup.timer
+    -systemctl --user disable --now dandelion.service
+    rm -f ~/.config/systemd/user/dandelion.service ~/.config/systemd/user/dandelion-backup.service ~/.config/systemd/user/dandelion-backup.timer
+    -systemctl --user daemon-reload
+    rm -f ~/.local/bin/dandelion
+    @echo "Kept: the data directory and ~/.config/dandelion/env"
+
+# Write a database backup now, with the env file the service reads.
+backup *args:
+    @set -a; [ -r ~/.config/dandelion/env ] && . ~/.config/dandelion/env; set +a; ~/.local/bin/dandelion backup {{args}}
 
 # The full gate. CI runs exactly this; run it before every push.
 ci: fmt-check typecheck gen-check lint test deny build

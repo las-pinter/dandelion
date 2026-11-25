@@ -1,0 +1,15 @@
+[Unit]
+Description=Dandelion machine dashboard
+Documentation=https://github.com/las-pinter/dandelion
+# No network ordering: a user manager has no network-online.target, and the
+# server needs only loopback. Origin resolution retries through Restart=always.
+
+[Service]
+ExecStart=%h/.local/bin/dandelion serve
+WorkingDirectory=%h
+EnvironmentFile=-%h/.config/dandelion/env
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
