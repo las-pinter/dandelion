@@ -101,9 +101,16 @@ observer: the pane never types into or resizes the agent's real terminal, so
 control stays in the audited action API (`POST /api/agents/action`). Binary
 frames carry pane bytes both ways; text frames carry
 `{"type":"resize","cols":N,"rows":N}`, which an observer accepts without
-resizing anything. The server sends `{"type":"resized",...}` when the backend
-reports a size, and `{"type":"closed","reason":…}` or
-`{"type":"error","message":…}` before the stream ends.
+resizing anything.
+
+The stream is the agent's own screen, drawn for the agent's own width, so the
+socket starts with `{"type":"resized","cols":N,"rows":N}` carrying that size
+before any bytes. A read-only pane renders at exactly that size: it scales its
+font so those columns fit its width and keeps the live bottom row in view,
+because cursor-addressed output only lands correctly at the size it was drawn
+for. The same frame follows every real resize of the agent's terminal, and
+`{"type":"closed","reason":…}` or `{"type":"error","message":…}` ends the
+stream.
 
 `GET /api/agents/{terminal}/screen` returns the visible screen only. History is
 never read: herdr-core scrolls a full-screen program to stitch it, and

@@ -198,11 +198,34 @@ describe('TranscriptView', () => {
     const { rerender } = render(view([first]))
     const { element } = scroller()
     element.scrollTop = 0
+    fireEvent.wheel(element)
     fireEvent.scroll(element)
 
     rerender(view([first, second]))
 
     expect(element.scrollTop).toBe(0)
+  })
+
+  it('keeps following through a scroll a resize produced', () => {
+    const first = {
+      offset: 0,
+      role: 'user' as const,
+      blocks: [{ kind: 'text' as const, text: 'one' }],
+    }
+    const second = {
+      offset: 40,
+      role: 'user' as const,
+      blocks: [{ kind: 'text' as const, text: 'two' }],
+    }
+    const { rerender } = render(view([first]))
+    const { element } = scroller()
+    // A layout change can scroll the list without the reader touching it.
+    element.scrollTop = 100
+    fireEvent.scroll(element)
+
+    rerender(view([first, second]))
+
+    expect(element.scrollTop).toBe(1000)
   })
 
   it('keeps the view in place when an earlier page is prepended', () => {

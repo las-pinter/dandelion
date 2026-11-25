@@ -8,15 +8,23 @@ use tokio::time::timeout;
 use crate::error::TerminalError;
 use crate::frame::{Frame, FrameDecoder, FrameKind};
 use crate::jsonrpc::{self, Incoming, Request};
-use crate::model::{AttachMode, AttachOptions, TerminalId};
+use crate::model::{AttachMode, AttachOptions, TerminalId, TerminalSize};
 use crate::stream::{AttachCommand, AttachEvent, AttachSession};
 use crate::util::CALL_TIMEOUT;
 
 use super::client::CoreClient;
-use super::wire::{AttachParams, AttachResult};
+use super::wire::{AttachParams, AttachResult, Terminal};
 
 /// Channel carrying JSON-RPC control messages.
 const CONTROL_CHANNEL: u32 = 0;
+
+/// The terminal size an observer must render at, from the attach reply.
+///
+/// `None` for a terminal that reported no size, so the client keeps its own.
+fn observer_size(terminal: &Terminal) -> Option<TerminalSize> {
+    (terminal.cols > 0 && terminal.rows > 0)
+        .then(|| TerminalSize::new(terminal.cols, terminal.rows))
+}
 
 /// How many output frames may wait for the consumer.
 const EVENT_CAPACITY: usize = 128;
@@ -114,6 +122,12 @@ pub(crate) async fn attach(
     };
 
     let (event_sender, event_receiver) = mpsc::channel(EVENT_CAPACITY);
+    // The stream is the terminal's own screen at its own size: the core never
+    // resizes a terminal for an observer, so a client only draws cursor
+    // addressed output correctly at this size. Announce it before any bytes.
+    if let Some(size) = observer_size(&result.terminal) {
+        let _ = event_sender.try_send(Ok(AttachEvent::Resized(size)));
+    }
     let (command_sender, command_receiver) = mpsc::channel(COMMAND_CAPACITY);
     tokio::spawn(run_stream(
         stream,
@@ -249,10 +263,24 @@ mod tests {
     use tokio::sync::mpsc;
     use tokio::time::timeout;
 
-    use super::run_stream;
+    use super::super::wire::Terminal;
+    use super::{observer_size, run_stream};
     use crate::frame::{Frame, FrameDecoder, FrameKind};
     use crate::model::TerminalSize;
     use crate::stream::{AttachCommand, AttachEvent};
+
+    #[test]
+    fn an_observer_learns_the_terminal_size() {
+        use serde_json::json;
+
+        let terminal: Terminal =
+            serde_json::from_value(json!({"address": "t7", "cols": 158, "rows": 73}))
+                .expect("terminal");
+        assert_eq!(observer_size(&terminal), Some(TerminalSize::new(158, 73)));
+
+        let silent: Terminal = serde_json::from_value(json!({"address": "t7"})).expect("terminal");
+        assert_eq!(observer_size(&silent), None);
+    }
 
     async fn read_frame(stream: &mut UnixStream) -> Frame {
         let mut header = [0_u8; 9];

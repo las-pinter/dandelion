@@ -2,18 +2,26 @@ import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { XtermPane } from './XtermPane'
 
-const mocks = vi.hoisted(() => ({ disposed: 0 }))
+const mocks = vi.hoisted(() => ({ disposed: 0, resized: [] as number[][] }))
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     cols = 80
     rows = 24
+    options = { fontSize: 13 }
     open() {}
     loadAddon() {}
     onData() {
       return { dispose: () => undefined }
     }
-    write() {}
+    write(_data: Uint8Array, done?: () => void) {
+      done?.()
+    }
+    resize(cols: number, rows: number) {
+      this.cols = cols
+      this.rows = rows
+      mocks.resized.push([cols, rows])
+    }
     dispose() {
       mocks.disposed += 1
     }
@@ -23,6 +31,9 @@ vi.mock('@xterm/xterm', () => ({
 vi.mock('@xterm/addon-fit', () => ({
   FitAddon: class {
     fit() {}
+    proposeDimensions() {
+      return { cols: 80, rows: 24 }
+    }
   },
 }))
 
@@ -64,6 +75,7 @@ class FakeSocket {
 
 beforeEach(() => {
   mocks.disposed = 0
+  mocks.resized = []
   FakeSocket.instances = []
   vi.stubGlobal('WebSocket', FakeSocket)
   vi.stubGlobal(
@@ -97,6 +109,29 @@ describe('XtermPane', () => {
 
     expect(FakeSocket.instances).toHaveLength(1)
     expect(mocks.disposed).toBe(0)
+  })
+
+  it('renders a read-only pane at the stream terminal size', async () => {
+    render(<XtermPane url="ws://example.test/agents/t1/ws" readOnly />)
+    await socketCount(1)
+
+    FakeSocket.instances[0]?.emit('message', {
+      data: JSON.stringify({ type: 'resized', cols: 158, rows: 73 }),
+    })
+
+    await waitFor(() => expect(mocks.resized).toEqual([[158, 73]]))
+  })
+
+  it('keeps its own size when it controls the terminal', async () => {
+    render(<XtermPane url="ws://example.test/agents/t1/ws" />)
+    await socketCount(1)
+
+    FakeSocket.instances[0]?.emit('message', {
+      data: JSON.stringify({ type: 'resized', cols: 158, rows: 73 }),
+    })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(mocks.resized).toEqual([])
   })
 
   it('reconnects when the socket url changes', async () => {

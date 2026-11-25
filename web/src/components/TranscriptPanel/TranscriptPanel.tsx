@@ -1,4 +1,13 @@
-import { createContext, memo, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -93,7 +102,9 @@ export function TranscriptView({
   // stays a row of its own. Both lookups are derived once per page change.
   const { callIds, results } = useMemo(() => derive(records), [records])
   const scroller = useRef<HTMLDivElement>(null)
+  const content = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
+  const gesture = useRef(0)
   const shown = useRef({ count: 0, first: null as number | null, height: 0 })
 
   // Follow the newest record, never yank a reader who scrolled back, and keep
@@ -115,16 +126,55 @@ export function TranscriptView({
     shown.current = { count: records.length, first, height: element.scrollHeight }
   }, [records])
 
+  const markGesture = () => {
+    gesture.current = Date.now()
+  }
+
+  // A chat follows its newest line while the reader is at the bottom. Two
+  // things move under that rule without a new record: rows whose real height
+  // replaces the `content-visibility` estimate (and images, and markdown that
+  // settles late), and the viewport itself when the live strip opens or
+  // closes. The first re-pins; the second keeps the bottom anchored by the
+  // height it lost, so the reader's place is not silently abandoned.
+  useEffect(() => {
+    const element = scroller.current
+    const rows = content.current
+    if (!element || !rows || typeof ResizeObserver === 'undefined') return
+    let viewport: number | null = null
+    const followRows = new ResizeObserver(() => {
+      if (stick.current) element.scrollTop = element.scrollHeight
+    })
+    const followViewport = new ResizeObserver(() => {
+      const next = element.clientHeight
+      if (viewport !== null && stick.current) element.scrollTop += viewport - next
+      viewport = next
+    })
+    followRows.observe(rows)
+    followViewport.observe(element)
+    return () => {
+      followRows.disconnect()
+      followViewport.disconnect()
+    }
+  }, [])
+
   return (
     <div className={cn('flex h-96 flex-col gap-2', className)}>
       <div
         ref={scroller}
-        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-lg border bg-background p-3"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-lg border bg-background p-3 [overflow-anchor:none]"
         role="log"
         aria-label={label}
+        // Only someone's own scrolling leaves the bottom; a scroll event a
+        // resize produces must not silently stop the follow.
+        onWheel={markGesture}
+        onTouchStart={markGesture}
+        onTouchMove={markGesture}
+        onPointerDown={markGesture}
         onScroll={(event) => {
           const element = event.currentTarget
-          stick.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48
+          const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 48
+          if (nearBottom) stick.current = true
+          else if (Date.now() - gesture.current < 1_000) stick.current = false
         }}
       >
         <PinToBottom.Provider
@@ -133,27 +183,29 @@ export function TranscriptView({
             if (element && stick.current) element.scrollTop = element.scrollHeight
           }}
         >
-          {hasEarlier && (
-            <div className="text-center">
-              <Button variant="outline" size="xs" onClick={onLoadEarlier}>
-                Load earlier
-              </Button>
-            </div>
-          )}
-          {records.map((record, index) => (
-            <RecordView
-              key={record.offset ?? index}
-              record={record}
-              results={results}
-              callIds={callIds}
-              subagents={subagents}
-              sessionId={sessionId}
-            />
-          ))}
-          {loading && <p className="text-sm text-muted-foreground">Reading the transcript…</p>}
-          {!loading && records.length === 0 && !error && (
-            <p className="text-sm text-muted-foreground">No messages yet.</p>
-          )}
+          <div ref={content} className="flex shrink-0 flex-col gap-3">
+            {hasEarlier && (
+              <div className="text-center">
+                <Button variant="outline" size="xs" onClick={onLoadEarlier}>
+                  Load earlier
+                </Button>
+              </div>
+            )}
+            {records.map((record, index) => (
+              <RecordView
+                key={record.offset ?? index}
+                record={record}
+                results={results}
+                callIds={callIds}
+                subagents={subagents}
+                sessionId={sessionId}
+              />
+            ))}
+            {loading && <p className="text-sm text-muted-foreground">Reading the transcript…</p>}
+            {!loading && records.length === 0 && !error && (
+              <p className="text-sm text-muted-foreground">No messages yet.</p>
+            )}
+          </div>
         </PinToBottom.Provider>
       </div>
       {error && (
