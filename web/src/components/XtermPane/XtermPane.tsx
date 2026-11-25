@@ -47,6 +47,14 @@ export function XtermPane({
 }: XtermPaneProps) {
   const host = useRef<HTMLDivElement>(null)
   const fitter = useRef<FitAddon | null>(null)
+  // The callback is read through a ref: a parent that re-renders (typing in
+  // its prompt box does) passes a new function each time, and that must not
+  // reopen the socket and repaint the terminal.
+  const closedWithoutOpen = useRef(onClosedWithoutOpen)
+
+  useEffect(() => {
+    closedWithoutOpen.current = onClosedWithoutOpen
+  }, [onClosedWithoutOpen])
 
   useEffect(() => {
     const element = host.current
@@ -58,6 +66,9 @@ export function XtermPane({
     let input: { dispose: () => void } | null = null
     let opened = false
     let failure: string | undefined
+    // The callback as it was when this socket opened: a late close must not
+    // call the successor's callback (which may act on the new target).
+    const notify = closedWithoutOpen.current
 
     const start = async () => {
       const [{ Terminal: Xterm }, { FitAddon: Fit }] = await Promise.all([
@@ -99,7 +110,7 @@ export function XtermPane({
       })
       ws.addEventListener('close', () => {
         if (!opened) {
-          onClosedWithoutOpen?.(failure)
+          notify?.(failure)
           return
         }
         if (!disposed) view.write('\r\n[connection closed]\r\n')
@@ -133,7 +144,7 @@ export function XtermPane({
       terminal?.dispose()
       fitter.current = null
     }
-  }, [url, readOnly, onClosedWithoutOpen])
+  }, [url, readOnly])
 
   useEffect(() => {
     if (active) fitter.current?.fit()

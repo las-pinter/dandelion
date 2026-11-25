@@ -98,7 +98,7 @@ export function AgentsPage() {
           title={claudeLabel(unmanagedSelected)}
           description={`Unmanaged Claude Code session · ${unmanagedSelected.cwd || 'unknown directory'}`}
         >
-          <TranscriptPanel sessionId={unmanagedSelected.sessionId} />
+          <TranscriptPanel sessionId={unmanagedSelected.sessionId} className="h-[70vh]" />
         </Panel>
       )}
 

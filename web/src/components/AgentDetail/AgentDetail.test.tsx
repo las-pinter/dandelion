@@ -110,6 +110,33 @@ describe('AgentDetail', () => {
     expect(screen.getByText('a permission prompt')).toBeInTheDocument()
   })
 
+  it('expands and collapses the view without dropping it', async () => {
+    const user = userEvent.setup()
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+    const pane = screen.getByTestId('xterm-pane')
+
+    await user.click(screen.getByRole('button', { name: 'Full screen' }))
+
+    const exit = screen.getByRole('button', { name: 'Exit full screen' })
+    expect(screen.getByRole('dialog', { name: 'Expanded agent view' })).toBeInTheDocument()
+    expect(screen.getByTestId('xterm-pane')).toBe(pane)
+
+    await user.click(exit)
+    expect(screen.getByTestId('xterm-pane')).toBe(pane)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('closes the expanded view on Escape', async () => {
+    const user = userEvent.setup()
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+
+    await user.click(screen.getByRole('button', { name: 'Full screen' }))
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Full screen' })).toBeInTheDocument()
+  })
+
   it('says why the pane could not attach', async () => {
     const user = userEvent.setup()
     setup()

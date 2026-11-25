@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,6 +13,7 @@ import { Panel } from '@/components/Panel/Panel'
 import { TranscriptPanel } from '@/components/TranscriptPanel/TranscriptPanel'
 import { StatusPill } from '@/components/StatusPill/StatusPill'
 import { XtermPane } from '@/components/XtermPane/XtermPane'
+import { cn } from '@/lib/utils'
 import {
   agentLabel,
   agentSocketUrl,
@@ -39,11 +40,44 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
   const [confirmKill, setConfirmKill] = useState(false)
   const [paneError, setPaneError] = useState<string | null>(null)
   const [view, setView] = useState<'terminal' | 'transcript'>('terminal')
+  const [expanded, setExpanded] = useState(false)
+  const overlay = useRef<HTMLDivElement>(null)
   const promptId = useId()
   const status = uiStatus(agent)
   const blocked = blockedLabel(agent.agent_state)
   const session = claude ? claudeSummary(claude) : null
   const inFlight = (kind: string) => busy === `${agent.id}:${kind}`
+
+  // The expanded view is modal: Escape closes it and Tab stays inside it.
+  useEffect(() => {
+    if (!expanded) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setExpanded(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const element = overlay.current
+      if (!element) return
+      const focusable = element.querySelectorAll<HTMLElement>(
+        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      )
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (!first || !last) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [expanded])
+
+  const showTranscript = view === 'transcript' && claude !== null
 
   const send = () => {
     if (prompt.trim() === '') return
@@ -143,47 +177,73 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
           Send
         </Button>
       </form>
-      {claude ? (
-        <div aria-label="Agent view" className="mb-2 flex gap-1">
-          <Button
-            size="xs"
-            aria-pressed={view === 'terminal'}
-            variant={view === 'terminal' ? 'secondary' : 'ghost'}
-            onClick={() => {
-              setView('terminal')
-              setPaneError(null)
-            }}
-          >
-            Terminal
-          </Button>
-          <Button
-            size="xs"
-            aria-pressed={view === 'transcript'}
-            variant={view === 'transcript' ? 'secondary' : 'ghost'}
-            onClick={() => setView('transcript')}
-          >
-            Transcript
+      <div
+        ref={overlay}
+        role={expanded ? 'dialog' : undefined}
+        aria-modal={expanded || undefined}
+        aria-label={expanded ? 'Expanded agent view' : undefined}
+        className={
+          expanded
+            ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-xl border bg-popover p-3 text-popover-foreground shadow-2xl'
+            : 'flex flex-col gap-2'
+        }
+      >
+        <div role="group" aria-label="Agent view" className="flex items-center gap-1">
+          {claude && (
+            <>
+              <Button
+                size="xs"
+                aria-pressed={view === 'terminal'}
+                variant={view === 'terminal' ? 'secondary' : 'ghost'}
+                onClick={() => {
+                  setView('terminal')
+                  setPaneError(null)
+                }}
+              >
+                Terminal
+              </Button>
+              <Button
+                size="xs"
+                aria-pressed={view === 'transcript'}
+                variant={view === 'transcript' ? 'secondary' : 'ghost'}
+                onClick={() => setView('transcript')}
+              >
+                Transcript
+              </Button>
+            </>
+          )}
+          <span className="flex-1" />
+          <Button size="xs" variant="ghost" onClick={() => setExpanded((open) => !open)}>
+            {expanded ? 'Exit full screen' : 'Full screen'}
           </Button>
         </div>
-      ) : null}
-      {view === 'transcript' && claude ? (
-        <TranscriptPanel sessionId={claude.sessionId} className="h-80" />
-      ) : (
-        <div className="h-80 overflow-hidden rounded-lg border bg-background">
-          <XtermPane
-            url={agentSocketUrl(agent.id)}
-            readOnly
-            onClosedWithoutOpen={(reason) =>
-              setPaneError(reason ?? 'the agent pane could not attach')
-            }
+        {showTranscript && claude ? (
+          <TranscriptPanel
+            sessionId={claude.sessionId}
+            className={expanded ? 'min-h-0 flex-1' : 'h-[60vh] sm:h-96'}
           />
-        </div>
-      )}
-      {!(view === 'transcript' && claude) && paneError && (
-        <p role="alert" className="mt-2 text-xs text-destructive">
-          {paneError}
-        </p>
-      )}
+        ) : (
+          <div
+            className={cn(
+              'overflow-hidden rounded-lg border bg-background',
+              expanded ? 'min-h-0 flex-1' : 'h-[60vh] sm:h-96',
+            )}
+          >
+            <XtermPane
+              url={agentSocketUrl(agent.id)}
+              readOnly
+              onClosedWithoutOpen={(reason) =>
+                setPaneError(reason ?? 'the agent pane could not attach')
+              }
+            />
+          </div>
+        )}
+        {!showTranscript && paneError && (
+          <p role="alert" className="text-xs text-destructive">
+            {paneError}
+          </p>
+        )}
+      </div>
 
       <Dialog open={confirmKill} onOpenChange={setConfirmKill}>
         <DialogContent>
