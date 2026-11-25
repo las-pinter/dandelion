@@ -27,8 +27,8 @@ virtual authenticator, checks the dashboard's live stream, and signs in with
 the password. A fresh Linux needs the browser's system libraries once:
 `pnpm --dir web exec playwright install --with-deps chromium`.
 
-Releases are built by CI from a `v*` tag: the workflow runs `just release` and
-attaches the binary and its checksum to the GitHub release.
+Releases are built by CI from a `v*` tag: the workflow runs the full gate,
+then attaches the binary and its checksum to the GitHub release.
 
 The server listens on `http://127.0.0.1:7443` and serves `GET /api/health`.
 `just dev-web` proxies `/api` there. Non-loopback bind addresses are refused.

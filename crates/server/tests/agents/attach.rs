@@ -1,8 +1,8 @@
 //! Agent attach-socket acceptance tests.
 //!
 //! The pane socket takes the same session-cookie and origin handshake as the
-//! rest of the API, then relays output, input, resize, and close to the fake
-//! backend without a live daemon.
+//! rest of the API. It relays output from the fake backend, drops browser
+//! input and resizes, and closes with the socket, all without a live daemon.
 
 mod fake;
 mod support;
@@ -34,7 +34,7 @@ async fn the_attach_socket_requires_a_session_and_the_origin() {
 }
 
 #[tokio::test]
-async fn the_attach_socket_observes_and_relays_both_ways() {
+async fn the_attach_socket_observes_output_and_drops_input() {
     let backend = FakeBackend::new(Behaviour::Normal);
     let state = agents_state(&backend).await;
     let cookie = session_cookie(&state).await;
@@ -72,15 +72,12 @@ async fn the_attach_socket_observes_and_relays_both_ways() {
         other => panic!("expected the terminal output, got {other:?}"),
     }
 
+    // The pane is read-only: browser input and resizes die at the server, so
+    // the next backend command is the close, never an input or resize.
     socket
         .send(Message::Binary(b"ls\r".to_vec().into()))
         .await
         .expect("input frame");
-    assert_eq!(
-        attach.next_command(WAIT).await,
-        AttachCommand::Input(b"ls\r".to_vec())
-    );
-
     socket
         .send(Message::Text(
             json!({"type": "resize", "cols": 100, "rows": 30})
@@ -89,14 +86,6 @@ async fn the_attach_socket_observes_and_relays_both_ways() {
         ))
         .await
         .expect("resize frame");
-    assert_eq!(
-        attach.next_command(WAIT).await,
-        AttachCommand::Resize(TerminalSize {
-            cols: 100,
-            rows: 30,
-        })
-    );
-
     socket.close(None).await.expect("close");
     assert_eq!(attach.next_command(WAIT).await, AttachCommand::Close);
 }

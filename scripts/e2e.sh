@@ -6,6 +6,9 @@
 # log. Everything lives under target/, so a run leaves the real data alone.
 set -euo pipefail
 
+# The server log holds the single-use setup link; keep it private.
+umask 077
+
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 

@@ -67,6 +67,22 @@ test('setup registers a passkey and a password, and the dashboard goes live', as
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible()
 })
 
+test('the app runs under its policy and keeps a saved theme', async ({ page }) => {
+  const violations: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') violations.push(message.text())
+  })
+
+  const response = await page.goto('/')
+  expect(response?.headers()['referrer-policy']).toBe('no-referrer')
+  expect(response?.headers()['content-security-policy']).toContain("font-src 'self' data:")
+
+  await page.evaluate(() => localStorage.setItem('dandelion-theme', 'light'))
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  expect(violations.filter((text) => text.includes('Content Security Policy'))).toEqual([])
+})
+
 test('an unauthenticated visitor signs in with the password', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveURL(/\/login$/)

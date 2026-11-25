@@ -10,6 +10,11 @@ use serde_json::Value;
 
 /// Longest text kept for one block, in bytes.
 pub const TEXT_LIMIT: usize = 8 * 1024;
+/// Longest line parsed into a record, in bytes.
+///
+/// A line is held whole before it can be bounded for display, so a runaway
+/// record must be refused before it is deserialized.
+pub const MAX_LINE_BYTES: usize = 1024 * 1024;
 /// Longest first-line tool summary, in characters.
 const SUMMARY_LIMIT: usize = 120;
 
@@ -75,6 +80,9 @@ pub enum Block {
 /// Parses one line; `None` for blank, malformed, or bookkeeping records.
 #[must_use]
 pub fn parse_line(line: &str) -> Option<Record> {
+    if line.len() > MAX_LINE_BYTES {
+        return None;
+    }
     let value: Value = serde_json::from_str(line).ok()?;
     let kind = value.get("type")?.as_str()?;
     let at = value
@@ -295,7 +303,17 @@ fn truncate(text: &str, limit: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Block, Record, TEXT_LIMIT, parse_line};
+    use super::{Block, MAX_LINE_BYTES, Record, TEXT_LIMIT, parse_line};
+
+    #[test]
+    fn an_oversized_line_is_skipped_before_parsing() {
+        let line = format!(
+            r#"{{"type":"user","message":{{"content":"{}"}}}}"#,
+            "x".repeat(MAX_LINE_BYTES)
+        );
+
+        assert!(parse_line(&line).is_none());
+    }
 
     #[test]
     fn block_fields_travel_in_camel_case() {

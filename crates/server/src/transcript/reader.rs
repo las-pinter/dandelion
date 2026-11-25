@@ -2,8 +2,9 @@
 //!
 //! A page walks backwards from its end in fixed-size blocks, so a long
 //! transcript costs one block of memory plus the page's records, not the file
-//! size. A live tail keeps its own offset and never consumes a partial
-//! trailing line.
+//! size; a line over the parse bound stops the scan. A live tail keeps its own
+//! offset and never consumes a partial trailing line, and one pass reads at
+//! most a few megabytes, so a burst larger than that waits for the next one.
 
 use std::{
     fs::File,
@@ -17,6 +18,8 @@ use super::records;
 pub const PAGE: usize = 50;
 /// Bytes read per backwards block.
 const BLOCK: u64 = 64 * 1024;
+/// Most bytes one tail pass reads; a larger burst waits for the next pass.
+const TAIL_READ: u64 = 4 * 1024 * 1024;
 
 /// One page of records plus the cursors around it.
 #[derive(Debug)]
@@ -74,6 +77,11 @@ pub fn page_before(path: &Path, before: Option<u64>, limit: usize) -> std::io::R
         let Some(first_newline) = data.iter().position(|byte| *byte == b'\n') else {
             // No complete line yet; carry everything into the next block.
             prefix = data;
+            if prefix.len() > records::MAX_LINE_BYTES {
+                // The line is over the parse bound; stop carrying it and keep
+                // scanning for the line before it.
+                prefix.clear();
+            }
             read_end = chunk_start;
             if chunk_start == 0 {
                 break;
@@ -93,6 +101,11 @@ pub fn page_before(path: &Path, before: Option<u64>, limit: usize) -> std::io::R
         }
 
         prefix = data[..from].to_vec();
+        if prefix.len() > records::MAX_LINE_BYTES {
+            // A line over the parse bound is skipped like any unreadable one;
+            // its bytes are dropped rather than carried back to its start.
+            prefix.clear();
+        }
         read_end = chunk_start;
 
         if dropped || chunk_start == 0 {
@@ -126,6 +139,26 @@ fn parse_block(region: &[u8], base: u64) -> Vec<records::Record> {
         offset += line.len() as u64;
     }
     found
+}
+
+/// Consumes one line longer than the read window, returning the bytes
+/// consumed (the newline included), or `None` at the end of the file.
+///
+/// Memory stays at one chunk; only the scan is proportional to the line.
+fn skip_line(file: &mut File) -> std::io::Result<Option<u64>> {
+    const CHUNK: usize = 64 * 1024;
+    let mut skipped = 0_u64;
+    let mut chunk = vec![0_u8; CHUNK];
+    loop {
+        let read = file.read(&mut chunk)?;
+        if read == 0 {
+            return Ok(None);
+        }
+        if let Some(position) = chunk[..read].iter().position(|byte| *byte == b'\n') {
+            return Ok(Some(skipped + position as u64 + 1));
+        }
+        skipped += read as u64;
+    }
 }
 
 /// The byte just before `offset`, or a newline when there is none.
@@ -239,9 +272,16 @@ pub fn tail(path: &Path, cursor: &mut Cursor) -> std::io::Result<Tail> {
     }
     file.seek(SeekFrom::Start(cursor.offset))?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    (&mut file).take(TAIL_READ).read_to_end(&mut buffer)?;
 
     let Some(last_newline) = buffer.iter().rposition(|byte| *byte == b'\n') else {
+        if buffer.len() as u64 == TAIL_READ
+            && let Some(skipped) = skip_line(&mut file)?
+        {
+            // One line filled the window; consume it so the tail advances.
+            cursor.offset += TAIL_READ + skipped;
+            cursor.print = print_at(&mut file, cursor.offset)?;
+        }
         return Ok(Tail {
             records: Vec::new(),
             reset: false,
@@ -273,7 +313,8 @@ pub fn tail(path: &Path, cursor: &mut Cursor) -> std::io::Result<Tail> {
 mod tests {
     use std::io::Write;
 
-    use super::{Cursor, page_before, tail};
+    use super::{Cursor, TAIL_READ, page_before, tail};
+    use crate::transcript::records;
 
     fn fixture(name: &str, lines: &[&str]) -> (tempfile::TempDir, std::path::PathBuf) {
         let dir = tempfile::tempdir().expect("temp dir");
@@ -454,6 +495,40 @@ mod tests {
             "the bytes before the cursor changed, though the newline matches"
         );
         assert_eq!(found.records.len(), 0, "a reset sends no records");
+    }
+
+    #[test]
+    fn a_line_over_the_parse_bound_does_not_hide_older_records() {
+        let one = user("one");
+        let big = user(&"z".repeat(records::MAX_LINE_BYTES + 1024));
+        let two = user("two");
+        let (_dir, path) = fixture(
+            "transcript.jsonl",
+            &[one.as_str(), big.as_str(), two.as_str()],
+        );
+
+        let page = page_before(&path, None, 50).expect("page");
+
+        assert_eq!(page.records.len(), 2, "the oversized record is skipped");
+        assert_eq!(page.records[0].offset, 0);
+        assert_eq!(page.records[1].offset, (one.len() + big.len() + 2) as u64);
+        assert!(!page.has_earlier);
+    }
+
+    #[test]
+    fn a_tail_skips_a_line_over_its_window() {
+        let (_dir, path) = fixture("transcript.jsonl", &[]);
+        let big = user(&"w".repeat(usize::try_from(TAIL_READ).expect("bound") + 1024));
+        let after = user("after");
+        std::fs::write(&path, format!("{big}\n{after}\n")).expect("write");
+        let mut cursor = Cursor::at(&path, 0).expect("cursor");
+
+        let first = tail(&path, &mut cursor).expect("tail");
+        assert_eq!(first.records.len(), 0, "the oversized line is skipped");
+
+        let second = tail(&path, &mut cursor).expect("tail");
+        let text = serde_json::to_string(&second.records).expect("json");
+        assert!(text.contains("after"), "{text}");
     }
 
     #[test]

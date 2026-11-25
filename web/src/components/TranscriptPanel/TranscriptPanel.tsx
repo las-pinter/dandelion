@@ -373,6 +373,7 @@ function TranscriptImage({ src, alt }: { src?: string | Blob; alt?: string }) {
       alt={alt ?? ''}
       loading="lazy"
       decoding="async"
+      referrerPolicy="no-referrer"
       onLoad={pin}
     />
   )

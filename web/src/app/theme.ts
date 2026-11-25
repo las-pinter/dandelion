@@ -1,6 +1,7 @@
 /**
  * Theme state. Dark is the default; the choice is persisted in localStorage
- * and applied to <html> before first paint by the inline script in index.html.
+ * and applied to <html> before first paint by /theme-init.js (served from
+ * web/public), because the CSP admits only same-origin scripts.
  */
 export type Theme = 'dark' | 'light'
 

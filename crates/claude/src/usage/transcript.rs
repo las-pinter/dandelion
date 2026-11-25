@@ -5,7 +5,7 @@
 //! beyond the line buffer, which is discarded after each line.
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use serde::Deserialize;
@@ -89,13 +89,27 @@ pub(crate) fn read_new_assistant_lines(
 
     loop {
         buffer.clear();
-        let read = reader
+        // Bound one line so a runaway record cannot exhaust memory; a line
+        // over the bound ends the pass and the next one retries from the same
+        // offset.
+        let read = (&mut reader)
+            .take(MAX_LINE_BYTES)
             .read_until(b'\n', &mut buffer)
             .map_err(|error| ClaudeError::io(path, error))?;
         if read == 0 {
             break;
         }
         if buffer.last() != Some(&b'\n') {
+            if u64::try_from(read).unwrap_or(0) < MAX_LINE_BYTES {
+                // A line still being written waits for the next call.
+                break;
+            }
+            // One line filled the bound; discard the rest of it so the reader
+            // makes progress instead of rereading the same bytes forever.
+            if let Some(skipped) = skip_line(&mut reader)? {
+                start = start.saturating_add(MAX_LINE_BYTES).saturating_add(skipped);
+                continue;
+            }
             break;
         }
         let consumed = u64::try_from(read).unwrap_or(u64::MAX);
@@ -107,6 +121,30 @@ pub(crate) fn read_new_assistant_lines(
 
     *offset = start;
     Ok(lines)
+}
+
+/// Longest line read into memory, in bytes.
+const MAX_LINE_BYTES: u64 = 4 * 1024 * 1024;
+
+/// Consumes the rest of an oversized line, returning the bytes consumed (the
+/// newline included), or `None` at the end of the file.
+fn skip_line(reader: &mut impl BufRead) -> Result<Option<u64>, ClaudeError> {
+    let mut skipped = 0_u64;
+    let mut buffer = Vec::new();
+    loop {
+        buffer.clear();
+        let read = reader
+            .take(MAX_LINE_BYTES)
+            .read_until(b'\n', &mut buffer)
+            .map_err(|error| ClaudeError::io("transcript", error))?;
+        if read == 0 {
+            return Ok(None);
+        }
+        skipped += u64::try_from(read).unwrap_or(u64::MAX);
+        if buffer.last() == Some(&b'\n') {
+            return Ok(Some(skipped));
+        }
+    }
 }
 
 fn parse_line(bytes: &[u8]) -> Option<AssistantLine> {
@@ -125,7 +163,7 @@ fn parse_line(bytes: &[u8]) -> Option<AssistantLine> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_line;
+    use super::{MAX_LINE_BYTES, parse_line, read_new_assistant_lines};
 
     #[test]
     fn ignores_non_assistant_records() {
@@ -161,5 +199,27 @@ mod tests {
     #[test]
     fn malformed_line_is_skipped() {
         assert!(parse_line(b"{not json").is_none());
+    }
+
+    #[test]
+    fn an_oversized_line_does_not_stall_the_reader() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("transcript.jsonl");
+        let big = format!(
+            r#"{{"type":"user","content":"{}"}}"#,
+            "x".repeat(usize::try_from(MAX_LINE_BYTES).expect("bound") + 1024)
+        );
+        let usage = r#"{"type":"assistant","message":{"id":"m1","usage":{"input_tokens":7}}}"#;
+        std::fs::write(&path, format!("{big}\n{usage}\n")).expect("write");
+        let mut offset = 0_u64;
+
+        let lines = read_new_assistant_lines(&path, &mut offset).expect("read");
+
+        assert_eq!(
+            lines.len(),
+            1,
+            "the record after the oversized line is read"
+        );
+        assert_eq!(lines[0].usage.input_tokens, 7);
     }
 }
