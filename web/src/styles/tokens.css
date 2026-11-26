@@ -14,7 +14,8 @@
      top bar. */
   --app-top-bar: 3.5rem;
   /* The bar's own height plus whatever the home indicator takes, so layout
-     and the measured bar cannot disagree. */
+     and the measured bar cannot disagree. There is no tab bar from `md` up,
+     so its reserve drops to nothing there. */
   --app-tab-bar: calc(3.0625rem + env(safe-area-inset-bottom));
   --app-scroll-offset: calc(var(--app-top-bar) + 0.5rem);
 
@@ -59,6 +60,14 @@
   --sidebar-accent-foreground: #0b0e12;
   --sidebar-border: #e2e5ea;
   --sidebar-ring: #4d6b00;
+}
+
+/* The bottom navigation exists only below `md`, so from `md` up nothing has to
+   be reserved for it. */
+@media (width >= 48rem) {
+  :root {
+    --app-tab-bar: 0rem;
+  }
 }
 
 .dark {

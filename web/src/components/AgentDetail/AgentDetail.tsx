@@ -106,18 +106,19 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
       title={agentLabel(agent)}
       description={`${agent.agent_kind ?? 'agent'} · ${agent.cwd ?? 'unknown directory'}`}
       status={status}
-      // On a phone the agent is the screen: the panel takes exactly the height
-      // between the app bar and the tab bar, and the chat spends whatever its
-      // header leaves. A fixed share of the viewport put the composer under
-      // the tab bar, so focusing it scrolled the page; a `dvh` height also
-      // changed under the reader every time the browser hid its address bar.
-      // When the viewport is shorter than the panel needs (a landscape phone),
-      // the floor wins and the page scrolls: a panel shorter than its own rows
-      // would draw the composer outside its border.
+      // The agent is the screen: the panel fills the height between the app bar
+      // and the tab bar, and the chat spends whatever its header leaves. A
+      // share of the viewport put the composer under the bar, so focusing it
+      // scrolled the page; a `dvh` height also changed under the reader every
+      // time the browser hid its address bar. A floor keeps the card taller
+      // than its rows, so a short viewport scrolls the page instead of drawing
+      // the composer outside the border; it is taller from `md` up because the
+      // strip's 280 px floor holds there and not on a phone, and because the
+      // answer bar's wrapped button row is the tallest thing the card holds.
       className={
         expanded
           ? undefined
-          : 'max-md:flex max-md:h-[calc(100svh-var(--app-scroll-offset)-var(--app-tab-bar))] max-md:min-h-[26rem] max-md:flex-col'
+          : 'flex h-[calc(100svh-var(--app-scroll-offset)-var(--app-tab-bar))] flex-col max-md:min-h-[26rem] md:min-h-[42rem]'
       }
       actions={
         !expanded && (
@@ -209,7 +210,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
         className={
           expanded
             ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-2xl border bg-popover p-4 text-popover-foreground shadow-2xl focus:outline-none'
-            : 'flex flex-col max-md:min-h-0 max-md:flex-1'
+            : 'flex min-h-0 flex-1 flex-col'
         }
       >
         {expanded && (
@@ -225,9 +226,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
           claude={claude}
           busy={busy}
           onAct={onAct}
-          className={
-            expanded ? 'h-auto min-h-0 flex-1' : 'max-md:h-auto max-md:min-h-0 max-md:flex-1'
-          }
+          className="h-auto min-h-0 flex-1"
         />
       </div>
 

@@ -160,10 +160,10 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
           <div
             className={cn(
               'overflow-hidden rounded-xl bg-background ring-1 ring-border/60',
-              // A phone cannot spare the desktop strip's 280 px floor without
-              // starving the transcript, so there its 40 % share rules alone —
-              // and shrinks on a short screen, because the composer must stay
-              // on it (the composer and the rows around it never shrink).
+              // About 40 % of the chat, with a 280 px floor from `md` up. A
+              // phone cannot spare that floor without starving the transcript,
+              // so there the share alone rules. The composer and the rows
+              // around it never shrink at all.
               hasTranscript ? 'min-h-[280px] basis-[40%] max-md:min-h-0' : 'min-h-0 flex-1',
             )}
           >
