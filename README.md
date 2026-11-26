@@ -169,13 +169,13 @@ collapses once it is idle or done; a toggle shows or hides it at any time. The
 strip draws the agent's own terminal size, scaling the text to fit the strip's
 width (never smaller than a readable size; wider terminals keep their right
 columns outside the view) and keeps the live bottom row in view, so its
-cursor-addressed output is never scrambled. The pane is read-only: viewing must not resize the agent's real
-terminal, so control goes through the audited action API. State changes arrive
-on the `agents` WebSocket topic. If no terminal backend answers at startup, a
-background retry adopts one when it appears, so a reboot needs no manual
-restart. A session with a
-discoverable transcript renders it in the chat: rendered
-markdown, collapsed thinking and tool calls, and nested subagents, streamed
+cursor-addressed output is never scrambled. The pane is read-only: viewing
+must not resize the agent's real terminal, so control goes through the audited
+action API. State changes arrive on the `agents` WebSocket topic. If no
+terminal backend answers at startup, a background retry adopts one when it
+appears, so a reboot needs no manual restart. A session with a discoverable
+transcript renders it in the chat: rendered markdown, collapsed thinking and
+tool calls, and nested subagents, streamed
 read-only from Claude Code's file and never stored. When a session's Claude
 Code state directory is readable, the detail
 panel also shows the session id, model, token totals, estimated cost, and what

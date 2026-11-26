@@ -14,7 +14,7 @@ export default defineConfig({
     // relying party matches the page, and use http://localhost:5173. The
     // target moves when the installed service already owns 7443.
     proxy: {
-      '/api': { target: process.env.DANDELION_DEV_TARGET ?? 'http://127.0.0.1:7443', ws: true },
+      '/api': { target: process.env.DANDELION_DEV_TARGET || 'http://127.0.0.1:7443', ws: true },
     },
   },
   test: {

@@ -24,6 +24,19 @@ const records: TranscriptRecord[] = [
     ],
   },
   {
+    role: 'assistant',
+    at: '2026-11-25T15:00:18Z',
+    blocks: [
+      {
+        kind: 'tool_use',
+        id: 'toolu_2',
+        name: 'Read',
+        summary: 'web/src/components/AgentChat/AgentChat.tsx',
+        input: '{\n  "file_path": "web/src/components/AgentChat/AgentChat.tsx"\n}',
+      },
+    ],
+  },
+  {
     role: 'user',
     at: '2026-11-25T15:00:31Z',
     blocks: [

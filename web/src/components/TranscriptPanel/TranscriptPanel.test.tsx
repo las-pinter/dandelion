@@ -264,6 +264,56 @@ describe('TranscriptView', () => {
     expect(element.scrollTop).toBe(1000)
   })
 
+  it('gives consecutive records from one role a single header', () => {
+    setup([
+      {
+        offset: 0,
+        role: 'assistant',
+        at: '2026-11-25T15:00:00Z',
+        blocks: [{ kind: 'text', text: 'first' }],
+      },
+      {
+        offset: 40,
+        role: 'assistant',
+        at: '2026-11-25T15:02:00Z',
+        blocks: [{ kind: 'text', text: 'second' }],
+      },
+      {
+        offset: 80,
+        role: 'user',
+        at: '2026-11-25T15:03:00Z',
+        blocks: [{ kind: 'text', text: 'third' }],
+      },
+    ])
+
+    expect(screen.getAllByText('assistant')).toHaveLength(1)
+    expect(screen.getAllByText('user')).toHaveLength(1)
+    // The header carries the span of the group, not just its first time.
+    expect(screen.getByText('assistant').parentElement?.textContent).toMatch(/–/)
+  })
+
+  it('opens no group for a record whose blocks all show inside a call', () => {
+    setup([
+      {
+        offset: 0,
+        role: 'assistant',
+        at: '2026-11-25T15:00:00Z',
+        blocks: [
+          { kind: 'tool_use', id: 'call-1', name: 'Bash', summary: 'just test', input: '{}' },
+        ],
+      },
+      {
+        offset: 40,
+        role: 'user',
+        at: '2026-11-25T15:00:10Z',
+        blocks: [{ kind: 'tool_result', toolUseId: 'call-1', isError: false, text: 'ok' }],
+      },
+    ])
+
+    expect(screen.queryByText('user')).toBeNull()
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+  })
+
   it('offers earlier pages and reports the loading state', () => {
     const props = setup([{ role: 'user', blocks: [{ kind: 'text', text: 'one' }] }], {
       hasEarlier: true,

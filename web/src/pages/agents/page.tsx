@@ -30,8 +30,12 @@ export function AgentsPage() {
   // prompt stays visible instead of below the fold.
   const show = (id: string) => {
     setSelectedId(id)
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     requestAnimationFrame(() =>
-      detail.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }),
+      detail.current?.scrollIntoView?.({
+        block: 'start',
+        behavior: motion ? 'auto' : 'smooth',
+      }),
     )
   }
 
@@ -94,7 +98,7 @@ export function AgentsPage() {
         )}
       </Panel>
 
-      <div ref={detail} className="flex flex-col gap-4">
+      <div ref={detail} className="flex scroll-mt-16 flex-col gap-4">
         {selected && (
           <AgentDetail
             key={selected.id}

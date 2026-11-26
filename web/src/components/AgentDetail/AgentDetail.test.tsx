@@ -126,6 +126,26 @@ describe('AgentDetail', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('keeps keyboard focus inside the expanded view, then returns it', async () => {
+    const user = userEvent.setup()
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+
+    await user.click(screen.getByRole('button', { name: 'Full screen' }))
+    const dialog = screen.getByRole('dialog', { name: 'Expanded agent view' })
+    expect(dialog).toHaveFocus()
+
+    // The trigger is behind the modal now, so tabbing must never leave it.
+    for (let press = 0; press < 40; press += 1) {
+      await user.tab()
+      expect(dialog.contains(document.activeElement)).toBe(true)
+    }
+    await user.tab({ shift: true })
+    expect(dialog.contains(document.activeElement)).toBe(true)
+
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Full screen' })).toHaveFocus()
+  })
+
   it('closes the expanded view on Escape', async () => {
     const user = userEvent.setup()
     render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)

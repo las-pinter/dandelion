@@ -193,9 +193,8 @@ export function TranscriptView({
               </div>
             )}
             {groups.map((group) => (
-              <section
+              <div
                 key={group.key}
-                aria-label={group.role}
                 className={cn(
                   'border-l-2 border-l-border pl-3',
                   group.role === 'user' && 'rounded-r-lg bg-secondary/40 py-1.5 pr-2',
@@ -204,7 +203,10 @@ export function TranscriptView({
                 <p className="mb-2 flex items-baseline gap-2 text-[11px] text-muted-foreground">
                   <span className={cn('font-medium', ROLE_TEXT[group.role])}>{group.role}</span>
                   {group.at && (
-                    <span className="font-mono tabular-nums">{formatTime(group.at)}</span>
+                    <span className="font-mono tabular-nums">
+                      {formatTime(group.at)}
+                      {group.end && group.end !== group.at && `–${formatTime(group.end)}`}
+                    </span>
                   )}
                 </p>
                 <div className="flex flex-col gap-3">
@@ -219,7 +221,7 @@ export function TranscriptView({
                     />
                   ))}
                 </div>
-              </section>
+              </div>
             ))}
             {loading && <p className="text-sm text-muted-foreground">Reading the transcript…</p>}
             {!loading && records.length === 0 && !error && (
@@ -247,7 +249,9 @@ const ROLE_TEXT: Record<string, string> = {
 interface Group {
   key: number
   role: string
+  /** The first record's time, and the last one's when it differs. */
   at?: string
+  end?: string
   records: TranscriptRecord[]
 }
 
@@ -258,8 +262,10 @@ function groupRecords(records: TranscriptRecord[], callIds: Set<string>): Group[
     // would leave an empty bubble, so it never starts a group.
     if (!record.blocks.some((block) => isShown(block, callIds))) continue
     const last = groups[groups.length - 1]
-    if (last && last.role === record.role) last.records.push(record)
-    else {
+    if (last && last.role === record.role) {
+      last.records.push(record)
+      if (record.at) last.end = record.at
+    } else {
       groups.push({
         key: record.offset ?? groups.length,
         role: record.role,

@@ -35,15 +35,24 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
   const [confirmKill, setConfirmKill] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const overlay = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const wasExpanded = useRef(false)
   const status = uiStatus(agent)
   const blocked = blockedLabel(agent.agent_state)
   const question = asksQuestion(agent.agent_state)
   const session = claude ? claudeSummary(claude) : null
   const inFlight = (kind: string) => busy === `${agent.id}:${kind}`
 
-  // The expanded view is modal: Escape closes it and Tab stays inside it.
+  // The expanded view is modal: Escape closes it and focus stays inside it.
+  // The trigger lives in the panel header, behind the overlay, and the list of
+  // focusable controls has disabled entries a Tab skips; so the key wrap is
+  // backed by a focus guard that pulls focus back whenever it lands outside.
   useEffect(() => {
     if (!expanded) return
+    const focusableIn = (element: HTMLElement) =>
+      element.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setExpanded(false)
@@ -52,22 +61,44 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
       if (event.key !== 'Tab') return
       const element = overlay.current
       if (!element) return
-      const focusable = element.querySelectorAll<HTMLElement>(
-        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
-      )
+      const focusable = focusableIn(element)
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
       if (!first || !last) return
-      if (event.shiftKey && document.activeElement === first) {
+      const active = document.activeElement
+      if (event.shiftKey && active === first) {
         event.preventDefault()
         last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && active === last) {
         event.preventDefault()
         first.focus()
       }
     }
+    const onFocusIn = (event: FocusEvent) => {
+      const element = overlay.current
+      if (!element || element.contains(event.target as Node)) return
+      const first = focusableIn(element)[0]
+      ;(first ?? element).focus()
+    }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    document.addEventListener('focusin', onFocusIn)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('focusin', onFocusIn)
+    }
+  }, [expanded])
+
+  // The trigger unmounts while the overlay is open, so opening moves focus
+  // into the modal and closing puts it back on the trigger.
+  useEffect(() => {
+    if (expanded) {
+      wasExpanded.current = true
+      overlay.current?.focus()
+      return
+    }
+    if (!wasExpanded.current) return
+    wasExpanded.current = false
+    trigger.current?.focus()
   }, [expanded])
 
   return (
@@ -77,17 +108,17 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
       status={status}
       actions={
         !expanded && (
-          <Button size="xs" variant="ghost" onClick={() => setExpanded(true)}>
+          <Button ref={trigger} size="xs" variant="ghost" onClick={() => setExpanded(true)}>
             Full screen
           </Button>
         )
       }
     >
-      {blocked && (
-        <p className="mb-2 text-xs text-status-waiting" aria-live="polite">
-          Waiting: {blocked}
-        </p>
-      )}
+      {/* Always mounted: a live region that appears already filled does not
+          announce the change from idle to waiting. */}
+      <p className="mb-2 text-xs text-status-waiting empty:hidden" aria-live="polite">
+        {blocked ? `Waiting: ${blocked}` : ''}
+      </p>
       {session && (
         <dl className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
           <div className="flex min-w-0 items-baseline gap-1.5">
@@ -161,9 +192,10 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
         role={expanded ? 'dialog' : undefined}
         aria-modal={expanded || undefined}
         aria-label={expanded ? 'Expanded agent view' : undefined}
+        tabIndex={expanded ? -1 : undefined}
         className={
           expanded
-            ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-2xl border bg-popover p-4 text-popover-foreground shadow-2xl'
+            ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-2xl border bg-popover p-4 text-popover-foreground shadow-2xl focus:outline-none'
             : 'flex flex-col'
         }
       >
