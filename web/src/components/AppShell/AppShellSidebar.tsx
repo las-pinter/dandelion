@@ -26,7 +26,7 @@ function HostCard() {
 export function AppShellSidebar({ pages }: AppShellSidebarProps) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-4">
+      <div className="flex h-[var(--app-top-bar)] shrink-0 items-center gap-2 border-b border-sidebar-border px-4">
         <span aria-hidden className="size-2.5 rounded-full bg-brand" />
         <span className="font-heading text-base font-semibold tracking-tight">Dandelion</span>
       </div>

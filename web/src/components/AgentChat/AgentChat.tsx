@@ -25,6 +25,31 @@ export interface AgentChatProps {
   className?: string
 }
 
+/** The heights of the bars that overlay the page, so they count as chrome. */
+function chromeHeights() {
+  const height = (name: string) => {
+    const node = document.querySelector(`[data-app-chrome="${name}"]`)
+    return node ? node.getBoundingClientRect().height : 0
+  }
+  return { top: height('top'), bottom: height('tab') }
+}
+
+/** Focuses a field without scrolling to it when the bars do not hide it. */
+function focusField(element: HTMLTextAreaElement | null) {
+  if (!element) return
+  const box = element.getBoundingClientRect()
+  const { top, bottom } = chromeHeights()
+  // The visual viewport is what the thumb and the keyboard leave; the layout
+  // viewport is the fallback where there is none.
+  const view = window.visualViewport
+  const pageTop = view ? Math.max(top, view.offsetTop) : top
+  const pageBottom = view
+    ? Math.min(window.innerHeight, view.offsetTop + view.height)
+    : window.innerHeight
+  const visible = box.top >= pageTop && box.bottom <= pageBottom - bottom
+  element.focus({ preventScroll: visible })
+}
+
 /**
  * One agent as a conversation: the transcript above, the live terminal strip
  * where the turn happens, the prompt at the bottom.
@@ -70,11 +95,14 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
   }
 
   // The prompt and the answer bar take each other's place, so focus follows.
+  // Focusing must not scroll a page that already shows the field: on a phone
+  // the chat is sized to fit, and a plain focus() dragged the page down to the
+  // composer on every swap. When the field really is off screen (a viewport
+  // too short for the chat), the scroll is the point, so it is left alone.
   useEffect(() => {
     if (question === hadQuestion.current) return
     hadQuestion.current = question
-    if (question) answerRef.current?.focus()
-    else promptRef.current?.focus()
+    focusField(question ? answerRef.current : promptRef.current)
   }, [question])
 
   const send = () => {
@@ -100,7 +128,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
       </div>
 
       {hasTranscript && (
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex shrink-0 items-center gap-2">
           <span
             aria-hidden
             className={cn(
@@ -132,7 +160,11 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
           <div
             className={cn(
               'overflow-hidden rounded-xl bg-background ring-1 ring-border/60',
-              hasTranscript ? 'min-h-[280px] basis-[40%]' : 'min-h-0 flex-1',
+              // A phone cannot spare the desktop strip's 280 px floor without
+              // starving the transcript, so there its 40 % share rules alone —
+              // and shrinks on a short screen, because the composer must stay
+              // on it (the composer and the rows around it never shrink).
+              hasTranscript ? 'min-h-[280px] basis-[40%] max-md:min-h-0' : 'min-h-0 flex-1',
             )}
           >
             <XtermPane
@@ -163,7 +195,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
         />
       ) : (
         <form
-          className="flex items-end gap-2 rounded-xl border bg-background/60 p-1.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30"
+          className="flex shrink-0 items-end gap-2 rounded-xl border bg-background/60 p-1.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30"
           onSubmit={(event) => {
             event.preventDefault()
             send()

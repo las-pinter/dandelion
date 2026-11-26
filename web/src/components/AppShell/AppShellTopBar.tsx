@@ -12,7 +12,10 @@ export interface AppShellTopBarProps {
 /** Page title on the left; palette and theme controls on the right. */
 export function AppShellTopBar({ title, isPage, onOpenPalette }: AppShellTopBarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur">
+    <header
+      data-app-chrome="top"
+      className="sticky top-0 z-30 flex h-[var(--app-top-bar)] shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur"
+    >
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground md:hidden">
           Dandelion

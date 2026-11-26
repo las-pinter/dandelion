@@ -31,7 +31,7 @@ export function AnswerBar({ busy, inputRef, onAct }: AnswerBarProps) {
   return (
     <form
       aria-label="Answer the question"
-      className="flex flex-col gap-2 rounded-xl border border-status-waiting/40 bg-status-waiting/5 p-2.5"
+      className="flex shrink-0 flex-col gap-2 rounded-xl border border-status-waiting/40 bg-status-waiting/5 p-2.5"
       onSubmit={(event) => {
         event.preventDefault()
         send()

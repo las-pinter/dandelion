@@ -3,6 +3,7 @@ import {
   formatTime,
   groupRecords,
   parseFrame,
+  roleOf,
   safeImageSource,
   subagentFor,
   transcriptSocketUrl,
@@ -111,6 +112,12 @@ describe('transcript groups', () => {
 
     expect(groups).toHaveLength(1)
     expect(groups[0]?.role).toBe('assistant')
+  })
+
+  it('reads a role the server did not name as a system record', () => {
+    expect(roleOf('assistant')).toBe('assistant')
+    expect(roleOf('tool')).toBe('system')
+    expect(roleOf(undefined)).toBe('system')
   })
 
   it('formats a time to the minute and leaves an unparsable value alone', () => {

@@ -178,6 +178,100 @@ describe('AgentChat', () => {
     expect(screen.getByLabelText('Prompt')).toHaveFocus()
   })
 
+  it('focuses the swapped field without scrolling the page', () => {
+    // On a phone a plain focus() drags the page down to the composer.
+    const focus = vi.spyOn(HTMLTextAreaElement.prototype, 'focus')
+    try {
+      const onAct = vi.fn<(action: AgentAction) => void>()
+      const question = withState({ state: 'blocked', blocked_reason: 'question', progress: null })
+      const { rerender } = render(<AgentChat agent={agent} claude={claude} onAct={onAct} />)
+
+      rerender(<AgentChat agent={question} claude={claude} onAct={onAct} />)
+      expect(focus.mock.lastCall).toEqual([{ preventScroll: true }])
+
+      rerender(<AgentChat agent={agent} claude={claude} onAct={onAct} />)
+      expect(focus.mock.lastCall).toEqual([{ preventScroll: true }])
+    } finally {
+      focus.mockRestore()
+    }
+  })
+
+  it('scrolls to the field when it really is off screen', () => {
+    // A viewport too short for the chat: the scroll is the point there.
+    const focus = vi.spyOn(HTMLTextAreaElement.prototype, 'focus')
+    const box = vi
+      .spyOn(HTMLTextAreaElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, window.innerHeight + 200, 300, 40))
+    try {
+      const onAct = vi.fn<(action: AgentAction) => void>()
+      const question = withState({ state: 'blocked', blocked_reason: 'question', progress: null })
+      const { rerender } = render(<AgentChat agent={agent} claude={claude} onAct={onAct} />)
+
+      rerender(<AgentChat agent={question} claude={claude} onAct={onAct} />)
+
+      expect(focus.mock.lastCall).toEqual([{ preventScroll: false }])
+    } finally {
+      focus.mockRestore()
+      box.mockRestore()
+    }
+  })
+
+  it('counts the top bar as covering the field', () => {
+    // A field scrolled up under the sticky bar is hidden too.
+    const bar = document.createElement('div')
+    bar.dataset.appChrome = 'top'
+    document.body.append(bar)
+    const focus = vi.spyOn(HTMLTextAreaElement.prototype, 'focus')
+    const box = vi
+      .spyOn(HTMLTextAreaElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 390, 40))
+    const barBox = vi
+      .spyOn(bar, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 390, 56))
+    try {
+      const onAct = vi.fn<(action: AgentAction) => void>()
+      const question = withState({ state: 'blocked', blocked_reason: 'question', progress: null })
+      const { rerender } = render(<AgentChat agent={agent} claude={claude} onAct={onAct} />)
+
+      rerender(<AgentChat agent={question} claude={claude} onAct={onAct} />)
+
+      expect(focus.mock.lastCall).toEqual([{ preventScroll: false }])
+    } finally {
+      focus.mockRestore()
+      box.mockRestore()
+      barBox.mockRestore()
+      bar.remove()
+    }
+  })
+
+  it('counts the tab bar as covering the field', () => {
+    // A field just above the viewport bottom is still hidden by the bar.
+    const bar = document.createElement('div')
+    bar.dataset.appChrome = 'tab'
+    document.body.append(bar)
+    const focus = vi.spyOn(HTMLTextAreaElement.prototype, 'focus')
+    const box = vi
+      .spyOn(HTMLTextAreaElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, window.innerHeight - 68, 390, 40))
+    const barBox = vi
+      .spyOn(bar, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, window.innerHeight - 49, 390, 49))
+    try {
+      const onAct = vi.fn<(action: AgentAction) => void>()
+      const question = withState({ state: 'blocked', blocked_reason: 'question', progress: null })
+      const { rerender } = render(<AgentChat agent={agent} claude={claude} onAct={onAct} />)
+
+      rerender(<AgentChat agent={question} claude={claude} onAct={onAct} />)
+
+      expect(focus.mock.lastCall).toEqual([{ preventScroll: false }])
+    } finally {
+      focus.mockRestore()
+      box.mockRestore()
+      barBox.mockRestore()
+      bar.remove()
+    }
+  })
+
   it('starts a reopened strip without the last attach error', async () => {
     const user = userEvent.setup()
     setup({ agent: withState({ state: 'idle', blocked_reason: null, progress: null }) })

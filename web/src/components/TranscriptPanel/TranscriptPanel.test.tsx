@@ -286,10 +286,10 @@ describe('TranscriptView', () => {
       },
     ])
 
-    expect(screen.getAllByText('assistant')).toHaveLength(1)
-    expect(screen.getAllByText('user')).toHaveLength(1)
+    expect(screen.getAllByText('Claude')).toHaveLength(1)
+    expect(screen.getAllByText('You')).toHaveLength(1)
     // The header carries the span of the group, not just its first time.
-    expect(screen.getByText('assistant').parentElement?.textContent).toMatch(/–/)
+    expect(screen.getByText('Claude').parentElement?.textContent).toMatch(/–/)
   })
 
   it('does not print the same minute twice in a group header', () => {
@@ -308,7 +308,7 @@ describe('TranscriptView', () => {
       },
     ])
 
-    expect(screen.getByText('assistant').parentElement?.textContent).not.toMatch(/–/)
+    expect(screen.getByText('Claude').parentElement?.textContent).not.toMatch(/–/)
   })
 
   it('opens no group for a record whose blocks all show inside a call', () => {
@@ -329,7 +329,7 @@ describe('TranscriptView', () => {
       },
     ])
 
-    expect(screen.queryByText('user')).toBeNull()
+    expect(screen.queryByText('You')).toBeNull()
     expect(screen.getAllByRole('article')).toHaveLength(1)
   })
 

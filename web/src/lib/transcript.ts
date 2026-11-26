@@ -123,6 +123,14 @@ export function derive(records: TranscriptRecord[]) {
   return { callIds, results }
 }
 
+/**
+ * A record's role. The wire carries a free string, so one the server does not
+ * name reads as a system record instead of breaking the view.
+ */
+export function roleOf(role: unknown): TranscriptRecord['role'] {
+  return role === 'user' || role === 'assistant' || role === 'system' ? role : 'system'
+}
+
 /** Consecutive records from one role read as one message and share a header. */
 export function groupRecords(records: TranscriptRecord[], callIds: Set<string>): TranscriptGroup[] {
   const groups: TranscriptGroup[] = []
@@ -130,14 +138,15 @@ export function groupRecords(records: TranscriptRecord[], callIds: Set<string>):
     // A record whose blocks are all hidden (a tool result inside its call)
     // would leave an empty bubble, so it never starts a group.
     if (!record.blocks.some((block) => isShown(block, callIds))) continue
+    const role = roleOf(record.role)
     const last = groups[groups.length - 1]
-    if (last && last.role === record.role) {
+    if (last && last.role === role) {
       last.records.push(record)
       if (record.at) last.end = record.at
     } else {
       groups.push({
         key: record.offset ?? groups.length,
-        role: record.role,
+        role,
         at: record.at ?? undefined,
         records: [record],
       })

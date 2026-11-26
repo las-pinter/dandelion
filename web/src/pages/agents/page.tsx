@@ -100,7 +100,9 @@ export function AgentsPage() {
         )}
       </Panel>
 
-      <div ref={detail} className="flex scroll-mt-16 flex-col gap-4">
+      {/* `html` carries the scroll padding that keeps a scrolled-to element
+          clear of the bars, so this wrapper needs no margin of its own. */}
+      <div ref={detail} className="flex flex-col gap-4">
         {selected && (
           <AgentDetail
             key={selected.id}

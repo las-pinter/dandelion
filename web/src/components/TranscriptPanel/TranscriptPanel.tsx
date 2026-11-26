@@ -205,7 +205,9 @@ export function TranscriptView({
                 )}
               >
                 <p className="mb-2 flex items-baseline gap-2 text-[11px] text-muted-foreground">
-                  <span className={cn('font-medium', ROLE_TEXT[group.role])}>{group.role}</span>
+                  <span className={cn('font-medium', ROLE[group.role].text)}>
+                    {ROLE[group.role].label}
+                  </span>
                   {(group.at || group.end) && (
                     <span className="font-mono tabular-nums">
                       {formatTime(group.at ?? group.end ?? '')}
@@ -245,10 +247,14 @@ export function TranscriptView({
   )
 }
 
-const ROLE_TEXT: Record<string, string> = {
-  user: 'text-status-waiting',
-  assistant: 'text-primary',
-  system: 'text-muted-foreground',
+/**
+ * How a role reads and looks. The transcript file names its writer
+ * `assistant`, which is a schema value, not something a reader says.
+ */
+const ROLE: Record<TranscriptRecord['role'], { label: string; text: string }> = {
+  user: { label: 'You', text: 'text-status-waiting' },
+  assistant: { label: 'Claude', text: 'text-primary' },
+  system: { label: 'System', text: 'text-muted-foreground' },
 }
 
 /** Re-pins the list to the newest record after content above it grows. */
