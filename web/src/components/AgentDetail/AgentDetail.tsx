@@ -116,8 +116,8 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
     >
       {/* Always mounted: a live region that appears already filled does not
           announce the change from idle to waiting. */}
-      <p className="mb-2 text-xs text-status-waiting empty:hidden" aria-live="polite">
-        {blocked ? `Waiting: ${blocked}` : ''}
+      <p className="mb-2 min-h-4 text-xs text-status-waiting" aria-live="polite">
+        {blocked ? `Waiting: ${blocked}` : '\u00A0'}
       </p>
       {session && (
         <dl className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">

@@ -292,6 +292,25 @@ describe('TranscriptView', () => {
     expect(screen.getByText('assistant').parentElement?.textContent).toMatch(/–/)
   })
 
+  it('does not print the same minute twice in a group header', () => {
+    setup([
+      {
+        offset: 0,
+        role: 'assistant',
+        at: '2026-11-25T15:00:04Z',
+        blocks: [{ kind: 'text', text: 'first' }],
+      },
+      {
+        offset: 60,
+        role: 'assistant',
+        at: '2026-11-25T15:00:18Z',
+        blocks: [{ kind: 'text', text: 'second' }],
+      },
+    ])
+
+    expect(screen.getByText('assistant').parentElement?.textContent).not.toMatch(/–/)
+  })
+
   it('opens no group for a record whose blocks all show inside a call', () => {
     setup([
       {

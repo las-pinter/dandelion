@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatTime,
+  groupRecords,
   parseFrame,
   safeImageSource,
   subagentFor,
@@ -66,5 +68,53 @@ describe('safeImageSource', () => {
     expect(safeImageSource('https://example.test/a.png')).toBe('https://example.test/a.png')
     expect(safeImageSource('http://example.test/a.png')).toBeNull()
     expect(safeImageSource(undefined)).toBeNull()
+  })
+})
+
+describe('transcript groups', () => {
+  const at = (minute: number) => `2026-11-25T15:${String(minute).padStart(2, '0')}:00Z`
+
+  it('groups consecutive records from one role', () => {
+    const groups = groupRecords(
+      [
+        { offset: 0, role: 'assistant', at: at(0), blocks: [{ kind: 'text', text: 'a' }] },
+        { offset: 40, role: 'assistant', at: at(2), blocks: [{ kind: 'text', text: 'b' }] },
+        { offset: 80, role: 'user', at: at(3), blocks: [{ kind: 'text', text: 'c' }] },
+      ],
+      new Set(),
+    )
+
+    expect(groups.map((group) => group.role)).toEqual(['assistant', 'user'])
+    expect(groups[0]?.records).toHaveLength(2)
+    expect(groups[0]?.at).toBe(at(0))
+    expect(groups[0]?.end).toBe(at(2))
+  })
+
+  it('opens no group for a record whose blocks all show inside a call', () => {
+    const groups = groupRecords(
+      [
+        {
+          offset: 0,
+          role: 'assistant',
+          at: at(0),
+          blocks: [{ kind: 'tool_use', id: 'call', name: 'Bash', summary: 'ls', input: '{}' }],
+        },
+        {
+          offset: 40,
+          role: 'user',
+          at: at(1),
+          blocks: [{ kind: 'tool_result', toolUseId: 'call', isError: false, text: 'ok' }],
+        },
+      ],
+      new Set(['call']),
+    )
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.role).toBe('assistant')
+  })
+
+  it('formats a time to the minute and leaves an unparsable value alone', () => {
+    expect(formatTime('2026-11-25T15:04:09Z')).toMatch(/04/)
+    expect(formatTime('not a time')).toBe('not a time')
   })
 })

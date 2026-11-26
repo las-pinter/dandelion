@@ -92,3 +92,63 @@ export function safeImageSource(source: unknown): string | null {
   if (typeof source !== 'string') return null
   return source.startsWith('https://') ? source : null
 }
+
+/** One rendered turn: consecutive records from a single role. */
+export interface TranscriptGroup {
+  key: number
+  role: TranscriptRecord['role']
+  /** The first record's time, and the last one's when it differs. */
+  at?: string
+  end?: string
+  records: TranscriptRecord[]
+}
+
+/** Whether a block has its own row: a tool result waits inside its call. */
+export function isShown(block: TranscriptBlock, callIds: Set<string>): boolean {
+  return !(block.kind === 'tool_result' && block.toolUseId && callIds.has(block.toolUseId))
+}
+
+/** The call ids and the tool results keyed by the call they answer. */
+export function derive(records: TranscriptRecord[]) {
+  const callIds = new Set<string>()
+  const results = new Map<string, Extract<TranscriptBlock, { kind: 'tool_result' }>>()
+  for (const record of records) {
+    for (const block of record.blocks) {
+      if (block.kind === 'tool_use') callIds.add(block.id)
+      if (block.kind === 'tool_result' && block.toolUseId) {
+        results.set(block.toolUseId, block)
+      }
+    }
+  }
+  return { callIds, results }
+}
+
+/** Consecutive records from one role read as one message and share a header. */
+export function groupRecords(records: TranscriptRecord[], callIds: Set<string>): TranscriptGroup[] {
+  const groups: TranscriptGroup[] = []
+  for (const record of records) {
+    // A record whose blocks are all hidden (a tool result inside its call)
+    // would leave an empty bubble, so it never starts a group.
+    if (!record.blocks.some((block) => isShown(block, callIds))) continue
+    const last = groups[groups.length - 1]
+    if (last && last.role === record.role) {
+      last.records.push(record)
+      if (record.at) last.end = record.at
+    } else {
+      groups.push({
+        key: record.offset ?? groups.length,
+        role: record.role,
+        at: record.at ?? undefined,
+        records: [record],
+      })
+    }
+  }
+  return groups
+}
+
+/** Short local time from an ISO timestamp, or the raw value when unparsable. */
+export function formatTime(at: string): string {
+  const date = new Date(at)
+  if (Number.isNaN(date.getTime())) return at
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
