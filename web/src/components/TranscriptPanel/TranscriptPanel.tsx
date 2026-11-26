@@ -101,6 +101,7 @@ export function TranscriptView({
   // A tool result shows under its call; one whose call is on another page
   // stays a row of its own. Both lookups are derived once per page change.
   const { callIds, results } = useMemo(() => derive(records), [records])
+  const groups = useMemo(() => groupRecords(records, callIds), [records, callIds])
   const scroller = useRef<HTMLDivElement>(null)
   const content = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
@@ -161,7 +162,7 @@ export function TranscriptView({
     <div className={cn('flex h-96 flex-col gap-2', className)}>
       <div
         ref={scroller}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-lg border bg-background p-3 [overflow-anchor:none]"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1 py-2 [overflow-anchor:none]"
         role="log"
         aria-label={label}
         // Only someone's own scrolling leaves the bottom; a scroll event a
@@ -183,23 +184,42 @@ export function TranscriptView({
             if (element && stick.current) element.scrollTop = element.scrollHeight
           }}
         >
-          <div ref={content} className="flex shrink-0 flex-col gap-3">
+          <div ref={content} className="flex w-full max-w-[84ch] shrink-0 flex-col gap-6">
             {hasEarlier && (
               <div className="text-center">
-                <Button variant="outline" size="xs" onClick={onLoadEarlier}>
+                <Button variant="ghost" size="xs" onClick={onLoadEarlier}>
                   Load earlier
                 </Button>
               </div>
             )}
-            {records.map((record, index) => (
-              <RecordView
-                key={record.offset ?? index}
-                record={record}
-                results={results}
-                callIds={callIds}
-                subagents={subagents}
-                sessionId={sessionId}
-              />
+            {groups.map((group) => (
+              <section
+                key={group.key}
+                aria-label={group.role}
+                className={cn(
+                  'border-l-2 border-l-border pl-3',
+                  group.role === 'user' && 'rounded-r-lg bg-secondary/40 py-1.5 pr-2',
+                )}
+              >
+                <p className="mb-2 flex items-baseline gap-2 text-[11px] text-muted-foreground">
+                  <span className={cn('font-medium', ROLE_TEXT[group.role])}>{group.role}</span>
+                  {group.at && (
+                    <span className="font-mono tabular-nums">{formatTime(group.at)}</span>
+                  )}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {group.records.map((record, index) => (
+                    <RecordView
+                      key={record.offset ?? `${group.key}-${index}`}
+                      record={record}
+                      results={results}
+                      callIds={callIds}
+                      subagents={subagents}
+                      sessionId={sessionId}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
             {loading && <p className="text-sm text-muted-foreground">Reading the transcript…</p>}
             {!loading && records.length === 0 && !error && (
@@ -217,10 +237,38 @@ export function TranscriptView({
   )
 }
 
-const ROLE_CLASS: Record<string, string> = {
-  user: 'border-l-4 border-l-status-waiting bg-muted/40',
-  assistant: 'border-l-4 border-l-primary',
-  system: 'border-l-4 border-l-muted-foreground',
+const ROLE_TEXT: Record<string, string> = {
+  user: 'text-status-waiting',
+  assistant: 'text-primary',
+  system: 'text-muted-foreground',
+}
+
+/** Consecutive records from one role read as one message and share a header. */
+interface Group {
+  key: number
+  role: string
+  at?: string
+  records: TranscriptRecord[]
+}
+
+function groupRecords(records: TranscriptRecord[], callIds: Set<string>): Group[] {
+  const groups: Group[] = []
+  for (const record of records) {
+    // A record whose blocks are all hidden (a tool result inside its call)
+    // would leave an empty bubble, so it never starts a group.
+    if (!record.blocks.some((block) => isShown(block, callIds))) continue
+    const last = groups[groups.length - 1]
+    if (last && last.role === record.role) last.records.push(record)
+    else {
+      groups.push({
+        key: record.offset ?? groups.length,
+        role: record.role,
+        at: record.at ?? undefined,
+        records: [record],
+      })
+    }
+  }
+  return groups
 }
 
 /** Whether a block has its own row: a tool result waits inside its call. */
@@ -263,16 +311,7 @@ function RecordView({
   const visible = record.blocks.filter((block) => isShown(block, callIds))
   if (visible.length === 0) return null
   return (
-    <article
-      className={cn(
-        'min-w-0 rounded-md border py-2 pr-2 pl-3 [contain-intrinsic-size:auto_120px] [content-visibility:auto]',
-        ROLE_CLASS[record.role],
-      )}
-    >
-      <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {record.role}
-        {record.at ? ` · ${formatTime(record.at)}` : ''}
-      </p>
+    <article className="min-w-0 [contain-intrinsic-size:auto_120px] [content-visibility:auto]">
       <div className="flex min-w-0 flex-col gap-2">
         {visible.map((block, index) => (
           <BlockView
@@ -307,9 +346,9 @@ function BlockView({
       return <Markdown text={block.text} />
     case 'thinking':
       return (
-        <details className="rounded border border-dashed p-2 text-xs">
+        <details className="rounded-md border border-transparent px-2 py-1 text-xs transition-colors hover:border-border hover:bg-muted/30">
           <summary className="cursor-pointer text-muted-foreground">Thinking</summary>
-          <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap font-sans">
+          <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap font-sans text-foreground/80">
             {block.text}
           </pre>
         </details>
@@ -318,17 +357,17 @@ function BlockView({
       const subagent = subagentFor(subagents, block.id)
       const result = results.get(block.id)
       return (
-        <details className="rounded border p-2 text-xs">
-          <summary className="cursor-pointer">
-            <span className="font-mono font-medium">{block.name}</span>{' '}
-            <span className="break-words text-muted-foreground">{block.summary}</span>
+        <details className="rounded-md border border-transparent px-2 py-1 text-xs transition-colors hover:border-border hover:bg-muted/30">
+          <summary className="flex cursor-pointer items-baseline gap-2">
+            <span className="shrink-0 font-mono font-medium">{block.name}</span>
+            <span className="min-w-0 truncate text-muted-foreground">{block.summary}</span>
           </summary>
-          <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap font-mono">
+          <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-background/70 p-2 whitespace-pre-wrap font-mono">
             {block.input}
           </pre>
           {result && (
             <div className="mt-2 border-t pt-2">
-              <p className={cn('mb-1', result.isError && 'text-destructive')}>
+              <p className={cn('mb-1 text-muted-foreground', result.isError && 'text-destructive')}>
                 {result.isError ? 'Error' : 'Result'}
               </p>
               <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-mono">
@@ -350,7 +389,10 @@ function BlockView({
       if (!isShown(block, callIds)) return null
       return (
         <details
-          className={cn('rounded border p-2 text-xs', block.isError && 'border-destructive/50')}
+          className={cn(
+            'rounded-md border border-transparent px-2 py-1 text-xs',
+            block.isError && 'border-destructive/40',
+          )}
         >
           <summary className="cursor-pointer text-muted-foreground">
             {block.isError ? 'Error' : 'Result'}
@@ -362,10 +404,10 @@ function BlockView({
       )
     case 'divider':
       return (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <hr className="flex-1" />
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
           {block.label}
-          <hr className="flex-1" />
+          <span className="h-px flex-1 bg-border" />
         </div>
       )
   }

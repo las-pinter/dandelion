@@ -31,14 +31,14 @@ export function AnswerBar({ busy, inputRef, onAct }: AnswerBarProps) {
   return (
     <form
       aria-label="Answer the question"
-      className="flex flex-col gap-2 rounded-lg border border-status-waiting/50 bg-muted/30 p-2"
+      className="flex flex-col gap-2 rounded-xl border border-status-waiting/40 bg-status-waiting/5 p-2.5"
       onSubmit={(event) => {
         event.preventDefault()
         send()
       }}
     >
       <div className="flex flex-wrap items-center gap-1">
-        <p className="mr-1 text-xs text-muted-foreground">The agent asks a question.</p>
+        <p className="mr-1 text-xs text-status-waiting">The agent asks a question.</p>
         <Button
           type="button"
           size="xs"
@@ -70,7 +70,7 @@ export function AnswerBar({ busy, inputRef, onAct }: AnswerBarProps) {
           Skip (Escape)
         </Button>
       </div>
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2 rounded-xl border bg-background/60 p-1.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30">
         <label htmlFor={fieldId} className="sr-only">
           Answer
         </label>
@@ -86,7 +86,7 @@ export function AnswerBar({ busy, inputRef, onAct }: AnswerBarProps) {
             send()
           }}
           placeholder="Type an answer into the question"
-          className="max-h-40 min-h-9 flex-1 py-1.5"
+          className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0"
         />
         <Button type="submit" size="sm" disabled={busy || text.trim() === ''}>
           Answer

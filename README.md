@@ -166,9 +166,10 @@ agent is one chat surface: the transcript as history, the live terminal strip
 where the turn happens, and the prompt at the bottom. The strip opens when a
 prompt is sent, stays while the agent works, is blocked, or has failed, and
 collapses once it is idle or done; a toggle shows or hides it at any time. The
-strip draws the agent's own terminal size at a font that fits the strip's width
-and keeps the live bottom row in view, so its cursor-addressed output is never
-scrambled. The pane is read-only: viewing must not resize the agent's real
+strip draws the agent's own terminal size, scaling the text to fit the strip's
+width (never smaller than a readable size; wider terminals keep their right
+columns outside the view) and keeps the live bottom row in view, so its
+cursor-addressed output is never scrambled. The pane is read-only: viewing must not resize the agent's real
 terminal, so control goes through the audited action API. State changes arrive
 on the `agents` WebSocket topic. If no terminal backend answers at startup, a
 background retry adopts one when it appears, so a reboot needs no manual

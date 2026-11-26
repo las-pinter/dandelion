@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Bot } from 'lucide-react'
 import type { PageDefinition } from '@/app/page-registry'
 import { AgentDetail } from '@/components/AgentDetail/AgentDetail'
@@ -24,6 +24,17 @@ export function AgentsPage() {
     : (agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null)
   const claude = claudeFor(snapshot?.claude, selected?.id)
 
+  const detail = useRef<HTMLDivElement>(null)
+
+  // A selected agent fills the screen: bring its panel to the top so the
+  // prompt stays visible instead of below the fold.
+  const show = (id: string) => {
+    setSelectedId(id)
+    requestAnimationFrame(() =>
+      detail.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }),
+    )
+  }
+
   const [line, setLine] = useState('claude')
   const [cwd, setCwd] = useState('')
   const [name, setName] = useState('')
@@ -39,7 +50,7 @@ export function AgentsPage() {
       name: name.trim() || undefined,
     })
     setSpawning(false)
-    if (info) setSelectedId(info.id)
+    if (info) show(info.id)
   }
 
   const actOnSelected = (action: AgentAction) => {
@@ -78,29 +89,31 @@ export function AgentsPage() {
             selectedId={
               unmanagedSelected ? `claude:${unmanagedSelected.sessionId}` : (selected?.id ?? null)
             }
-            onSelect={setSelectedId}
+            onSelect={show}
           />
         )}
       </Panel>
 
-      {selected && (
-        <AgentDetail
-          key={selected.id}
-          agent={selected}
-          claude={claude}
-          busy={busy}
-          onAct={actOnSelected}
-        />
-      )}
+      <div ref={detail} className="flex flex-col gap-4">
+        {selected && (
+          <AgentDetail
+            key={selected.id}
+            agent={selected}
+            claude={claude}
+            busy={busy}
+            onAct={actOnSelected}
+          />
+        )}
 
-      {unmanagedSelected && (
-        <Panel
-          title={claudeLabel(unmanagedSelected)}
-          description={`Unmanaged Claude Code session · ${unmanagedSelected.cwd || 'unknown directory'}`}
-        >
-          <TranscriptPanel sessionId={unmanagedSelected.sessionId} className="h-[70vh]" />
-        </Panel>
-      )}
+        {unmanagedSelected && (
+          <Panel
+            title={claudeLabel(unmanagedSelected)}
+            description={`Unmanaged Claude Code session · ${unmanagedSelected.cwd || 'unknown directory'}`}
+          >
+            <TranscriptPanel sessionId={unmanagedSelected.sessionId} className="h-[70vh]" />
+          </Panel>
+        )}
+      </div>
 
       <Panel
         title="Start an agent"

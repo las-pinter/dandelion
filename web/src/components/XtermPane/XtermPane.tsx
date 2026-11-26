@@ -105,8 +105,10 @@ export function XtermPane({
 
       // The observe stream is the agent's own screen, drawn for the agent's
       // own width: cursor addressing only lands correctly at that size. Scale
-      // the font so those columns fit the pane, then keep the live bottom in
-      // view instead of squeezing rows into a height that cannot hold them.
+      // the font so those columns fit the pane (never below a readable size;
+      // any remaining columns fall outside the view), then keep the live
+      // bottom in view instead of squeezing rows into a height that cannot
+      // hold them.
       const adopt = (cols: number, rows: number) => {
         if (cols <= 0 || rows <= 0) return
         source = { cols, rows }
@@ -117,7 +119,9 @@ export function XtermPane({
           if (!proposed || proposed.cols === cols) break
           // Columns per font size are inverse proportional: a smaller font
           // fits more of them.
-          fontSize = Math.min(24, Math.max(6, (fontSize * proposed.cols) / Math.max(1, cols)))
+          // Below this the glyphs are unreadable, so the pane keeps the text
+          // legible and lets the right-hand columns fall outside the view.
+          fontSize = Math.min(24, Math.max(8, (fontSize * proposed.cols) / Math.max(1, cols)))
         }
         view.options.fontSize = fontSize
         if (view.cols !== cols || view.rows !== rows) view.resize(cols, rows)

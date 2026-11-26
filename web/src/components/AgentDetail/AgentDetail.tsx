@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Panel } from '@/components/Panel/Panel'
-import { StatusPill } from '@/components/StatusPill/StatusPill'
 import {
   agentLabel,
   asksQuestion,
@@ -76,33 +75,41 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
       title={agentLabel(agent)}
       description={`${agent.agent_kind ?? 'agent'} · ${agent.cwd ?? 'unknown directory'}`}
       status={status}
-      actions={<StatusPill status={status} />}
+      actions={
+        !expanded && (
+          <Button size="xs" variant="ghost" onClick={() => setExpanded(true)}>
+            Full screen
+          </Button>
+        )
+      }
     >
-      <p className="mb-3 text-xs text-muted-foreground" aria-live="polite">
-        {blocked ?? 'Nothing is waiting on you.'}
-      </p>
+      {blocked && (
+        <p className="mb-2 text-xs text-status-waiting" aria-live="polite">
+          Waiting: {blocked}
+        </p>
+      )}
       {session && (
-        <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg border border-dashed p-3 text-xs sm:grid-cols-4">
-          <div className="min-w-0">
+        <dl className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
+          <div className="flex min-w-0 items-baseline gap-1.5">
             <dt className="text-muted-foreground">Claude session</dt>
             <dd className="truncate font-mono" title={session.sessionId}>
               {session.sessionId.slice(0, 8)}
             </dd>
           </div>
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-baseline gap-1.5">
             <dt className="text-muted-foreground">Model</dt>
             <dd className="truncate">{session.model}</dd>
           </div>
-          <div>
+          <div className="flex items-baseline gap-1.5">
             <dt className="text-muted-foreground">Tokens</dt>
             <dd className="tabular-nums">{session.tokens}</dd>
           </div>
-          <div>
+          <div className="flex items-baseline gap-1.5">
             <dt className="text-muted-foreground">Est. cost</dt>
             <dd className="tabular-nums">{session.cost}</dd>
           </div>
           {session.waiting && (
-            <div className="col-span-2 sm:col-span-4">
+            <div className="flex items-baseline gap-1.5">
               <dt className="text-muted-foreground">Waiting for</dt>
               <dd>{session.waiting}</dd>
             </div>
@@ -114,6 +121,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
           <>
             <Button
               size="xs"
+              variant={blocked ? 'default' : 'ghost'}
               disabled={inFlight('approve') || !blocked}
               title={blocked ? undefined : 'no prompt is waiting'}
               onClick={() => onAct({ kind: 'approve' })}
@@ -122,7 +130,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
             </Button>
             <Button
               size="xs"
-              variant="outline"
+              variant={blocked ? 'outline' : 'ghost'}
               disabled={inFlight('deny') || !blocked}
               onClick={() => onAct({ kind: 'deny' })}
             >
@@ -141,6 +149,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
         <Button
           size="xs"
           variant="ghost"
+          className="text-muted-foreground hover:text-destructive"
           disabled={inFlight('kill')}
           onClick={() => setConfirmKill(true)}
         >
@@ -154,16 +163,18 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
         aria-label={expanded ? 'Expanded agent view' : undefined}
         className={
           expanded
-            ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-xl border bg-popover p-3 text-popover-foreground shadow-2xl'
-            : 'flex flex-col gap-2'
+            ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-2xl border bg-popover p-4 text-popover-foreground shadow-2xl'
+            : 'flex flex-col'
         }
       >
-        <div className="flex items-center gap-2">
-          <span className="flex-1" />
-          <Button size="xs" variant="ghost" onClick={() => setExpanded((open) => !open)}>
-            {expanded ? 'Exit full screen' : 'Full screen'}
-          </Button>
-        </div>
+        {expanded && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="min-w-0 truncate text-sm font-semibold">{agentLabel(agent)}</p>
+            <Button size="xs" variant="ghost" onClick={() => setExpanded(false)}>
+              Exit full screen
+            </Button>
+          </div>
+        )}
         <AgentChat
           agent={agent}
           claude={claude}

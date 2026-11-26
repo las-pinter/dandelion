@@ -96,7 +96,7 @@ describe('AgentDetail', () => {
     const pane = screen.getByTestId('xterm-pane')
     expect(pane).toHaveTextContent('ws://localhost:3000/api/agents/t7/ws')
     expect(pane).toHaveAttribute('data-readonly', 'true')
-    expect(screen.getByText('needs permission')).toBeInTheDocument()
+    expect(screen.getByText(/needs permission/)).toBeInTheDocument()
   })
 
   it('shows the Claude session, model, tokens and cost', () => {

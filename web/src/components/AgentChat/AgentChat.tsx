@@ -100,8 +100,19 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
       </div>
 
       {hasTranscript && (
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-muted-foreground">Live terminal</p>
+        <div className="mt-1 flex items-center gap-2">
+          <span
+            aria-hidden
+            className={cn(
+              'size-1.5 rounded-full',
+              state === 'working'
+                ? 'animate-pulse bg-status-working'
+                : stripShown
+                  ? 'bg-status-idle'
+                  : 'bg-muted-foreground/40',
+            )}
+          />
+          <p className="text-xs text-muted-foreground">Live output</p>
           <span className="flex-1" />
           <Button
             size="xs"
@@ -120,7 +131,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
         <>
           <div
             className={cn(
-              'overflow-hidden rounded-lg border bg-background',
+              'overflow-hidden rounded-xl bg-background ring-1 ring-border/60',
               hasTranscript ? 'min-h-[280px] basis-[40%]' : 'min-h-0 flex-1',
             )}
           >
@@ -152,7 +163,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
         />
       ) : (
         <form
-          className="flex items-end gap-2"
+          className="flex items-end gap-2 rounded-xl border bg-background/60 p-1.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30"
           onSubmit={(event) => {
             event.preventDefault()
             send()
@@ -172,8 +183,8 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
               event.preventDefault()
               send()
             }}
-            placeholder="Send a prompt to this agent"
-            className="max-h-40 min-h-9 flex-1 py-1.5"
+            placeholder="Send a prompt…"
+            className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0"
           />
           <Button type="submit" size="sm" disabled={inFlight('prompt') || prompt.trim() === ''}>
             Send
