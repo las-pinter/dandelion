@@ -30,7 +30,9 @@ export function AgentsPage() {
   // prompt stays visible instead of below the fold.
   const show = (id: string) => {
     setSelectedId(id)
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const motion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
     requestAnimationFrame(() =>
       detail.current?.scrollIntoView?.({
         block: 'start',
