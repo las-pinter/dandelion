@@ -84,8 +84,10 @@ export function DashboardPage() {
   }, [range, seconds, minutes])
 
   const disk = snapshot ? rootDisk(snapshot) : undefined
-  const diskPercent =
-    disk && disk.total_bytes > 0 ? (disk.used_bytes / disk.total_bytes) * 100 : undefined
+  // Fullness the way `df` reports it: the blocks reserved for root are not
+  // available to the user, so a share of the total understates the gauge.
+  const diskCapacity = disk ? disk.used_bytes + disk.available_bytes : 0
+  const diskPercent = disk && diskCapacity > 0 ? (disk.used_bytes / diskCapacity) * 100 : undefined
   const hottest = snapshot ? hottestTemperature(snapshot) : undefined
   const rx = snapshot?.network.reduce((sum, interface_) => sum + interface_.rx_bytes_per_sec, 0)
   const tx = snapshot?.network.reduce((sum, interface_) => sum + interface_.tx_bytes_per_sec, 0)

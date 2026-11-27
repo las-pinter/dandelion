@@ -50,8 +50,8 @@ const state: SystemMetricsState = {
         mount_point: '/',
         filesystem: 'ext4',
         total_bytes: 512 * 1024 ** 3,
-        used_bytes: 256 * 1024 ** 3,
-        available_bytes: 256 * 1024 ** 3,
+        used_bytes: 400 * 1024 ** 3,
+        available_bytes: 64 * 1024 ** 3,
         read_bytes_per_sec: 0,
         write_bytes_per_sec: 0,
       },
@@ -163,6 +163,9 @@ describe('DashboardPage', () => {
     expect(screen.getByText('8 cores')).toBeInTheDocument()
     expect(screen.getByText('of 8 GiB')).toBeInTheDocument()
     expect(screen.getByText('of 512.0 GiB')).toBeInTheDocument()
+    // 400 GiB used of 464 GiB the user can fill: the `df` share, not 400/512.
+    const diskCard = screen.getByText('Disk').closest('div') as HTMLElement
+    expect(within(diskCard).getByText('86')).toBeInTheDocument()
     expect(screen.getByText('1 minute average')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /CPU history/ })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /Memory history/ })).toBeInTheDocument()
