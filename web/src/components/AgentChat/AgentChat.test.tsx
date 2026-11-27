@@ -125,6 +125,75 @@ describe('AgentChat', () => {
     expect(screen.getByTestId('xterm-pane')).toBeInTheDocument()
   })
 
+  it('enlarges the transcript over the chat until a prompt or the toggle returns the split', async () => {
+    const user = userEvent.setup()
+    setup()
+
+    const strip = () => screen.getByTestId('xterm-pane').closest('.overflow-hidden')
+    await user.click(screen.getByRole('button', { name: 'Enlarge the transcript' }))
+    expect(screen.getByRole('button', { name: 'Enlarge the transcript' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(strip()).toHaveClass('hidden')
+
+    // Sending a prompt brings the turn back into view.
+    await user.type(screen.getByLabelText('Prompt'), 'go{Enter}')
+
+    expect(strip()).not.toHaveClass('hidden')
+    expect(screen.getByRole('button', { name: 'Enlarge the transcript' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('returns the split when a closed terminal is shown again', async () => {
+    const user = userEvent.setup()
+    setup({ agent: withState({ state: 'idle', blocked_reason: null, progress: null }) })
+
+    await user.click(screen.getByRole('button', { name: 'Enlarge the transcript' }))
+    await user.click(screen.getByRole('button', { name: 'Show terminal' }))
+
+    // The new terminal must be visible, not hidden behind the enlarged
+    // transcript.
+    expect(screen.getByTestId('xterm-pane').closest('.overflow-hidden')).not.toHaveClass('hidden')
+    expect(screen.getByRole('log', { name: 'Transcript' }).closest('.hidden')).toBeNull()
+  })
+
+  it('shows the split when the agent blocks, so the dialog is not hidden', async () => {
+    const user = userEvent.setup()
+    const onAct = vi.fn<(action: AgentAction) => void>()
+    const question = withState({ state: 'blocked', blocked_reason: 'question', progress: null })
+    const { rerender } = render(<AgentChat agent={agent} claude={claude} onAct={onAct} />)
+
+    await user.click(screen.getByRole('button', { name: 'Enlarge the transcript' }))
+    rerender(<AgentChat agent={question} claude={claude} onAct={onAct} />)
+
+    expect(screen.getByRole('log', { name: 'Transcript' }).closest('.hidden')).toBeNull()
+    expect(screen.getByRole('form', { name: 'Answer the question' })).toBeInTheDocument()
+  })
+
+  it('enlarges the live output and gives the chat back when the agent settles', async () => {
+    const user = userEvent.setup()
+    const onAct = vi.fn<(action: AgentAction) => void>()
+    const idle = withState({ state: 'idle', blocked_reason: null, progress: null })
+    const { rerender } = render(<AgentChat agent={idle} claude={claude} onAct={onAct} />)
+    await user.click(screen.getByRole('button', { name: 'Show terminal' }))
+    await user.click(screen.getByRole('button', { name: 'Enlarge the live output' }))
+
+    const transcript = () => screen.getByRole('log', { name: 'Transcript' })
+    expect(transcript().closest('.hidden')).not.toBeNull()
+    expect(screen.getByTestId('xterm-pane').closest('.overflow-hidden')).toHaveClass('flex-1')
+
+    // The settled agent closes the strip; an enlarged terminal must not leave
+    // the chat with nothing in it.
+    rerender(<AgentChat agent={agent} claude={claude} onAct={onAct} />)
+    rerender(<AgentChat agent={idle} claude={claude} onAct={onAct} />)
+
+    expect(screen.queryByTestId('xterm-pane')).toBeNull()
+    expect(transcript().closest('.hidden')).toBeNull()
+  })
+
   it('collapses the strip once the turn it opened for settles', async () => {
     const user = userEvent.setup()
     const onAct = vi.fn<(action: AgentAction) => void>()

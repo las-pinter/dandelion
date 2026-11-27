@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { Maximize2, Minimize2 } from 'lucide-react'
 import { AnswerBar } from '@/components/AnswerBar/AnswerBar'
 import { TranscriptPanel } from '@/components/TranscriptPanel/TranscriptPanel'
 import { XtermPane } from '@/components/XtermPane/XtermPane'
@@ -50,17 +51,54 @@ function focusField(element: HTMLTextAreaElement | null) {
   element.focus({ preventScroll: visible })
 }
 
+/** Enlarges a pane over the chat, or returns the two panes to their split. */
+function EnlargeToggle({
+  pressed,
+  label,
+  text,
+  onToggle,
+}: {
+  pressed: boolean
+  label: string
+  /** A visible name for the pane; the accessible name stays the action. */
+  text?: string
+  onToggle: () => void
+}) {
+  const Icon = pressed ? Minimize2 : Maximize2
+  // A toggle keeps one name; the state is `aria-pressed`, and the tooltip says
+  // what the next press does.
+  const title = pressed ? 'Return to the split view' : `Enlarge ${label}`
+  return (
+    <Button
+      size="xs"
+      variant="ghost"
+      aria-pressed={pressed}
+      aria-label={`Enlarge ${label}`}
+      title={title}
+      onClick={onToggle}
+    >
+      {text}
+      <Icon className="size-3.5" aria-hidden />
+    </Button>
+  )
+}
+
 /**
  * One agent as a conversation: the transcript above, the live terminal strip
  * where the turn happens, the prompt at the bottom.
  *
  * The strip appears with the turn and leaves when the agent settles; the owner
  * can show or hide it at any time. A question block swaps the prompt box for
- * the answer bar so the dialog can be answered, not only accepted.
+ * the answer bar so the dialog can be answered, not only accepted. Either pane
+ * can be enlarged over the whole chat, which is how a phone reads a page that
+ * would otherwise show a few lines of each.
  */
 export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatProps) {
   const [prompt, setPrompt] = useState('')
   const [choice, setChoice] = useState<'auto' | 'shown' | 'hidden'>('auto')
+  // Which pane the owner enlarged over the whole chat; both stay mounted, so
+  // the pane keeps its scroll position and its socket while it is out of view.
+  const [maximized, setMaximized] = useState<'transcript' | 'terminal' | null>(null)
   // A failed pane stays dead until it remounts: bumping this reconnects it.
   const [stripAttempt, setStripAttempt] = useState(0)
   const [paneError, setPaneError] = useState<string | null>(null)
@@ -72,6 +110,10 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
   const hadQuestion = useRef(question)
   const hasTranscript = claude != null
   const stripShown = !hasTranscript || showLiveStrip(agent.agent_state, choice)
+  // A settled agent closes the strip, so an enlarged terminal has nothing to
+  // show; the transcript takes the chat back instead of leaving it empty.
+  const terminalMaximized = maximized === 'terminal' && stripShown
+  const transcriptMaximized = hasTranscript && maximized === 'transcript'
   const inFlight = (kind: string) => busy === `${agent.id}:${kind}`
   const agentBusy = busy?.startsWith(`${agent.id}:`) === true
 
@@ -91,6 +133,9 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
   if (state !== lastState) {
     setLastState(state)
     if (state !== 'working') setChoice('auto')
+    // A block puts a dialog on the terminal; an enlarged transcript would
+    // hide the options the answer bar is choosing between.
+    if (state === 'blocked') setMaximized(null)
     reconnectIfFailed()
   }
 
@@ -110,14 +155,15 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
     onAct({ kind: 'prompt', text: prompt })
     setPrompt('')
     // The turn starts now, so the strip opens with it rather than waiting for
-    // the first state refresh.
+    // the first state refresh, and an enlarged transcript makes room for it.
     setChoice('shown')
+    setMaximized(null)
     reconnectIfFailed()
   }
 
   return (
     <div className={cn('flex h-[80dvh] min-h-[32rem] flex-col gap-2', className)}>
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className={cn('flex min-h-0 flex-1 flex-col', terminalMaximized && 'hidden')}>
         {hasTranscript && claude ? (
           <TranscriptPanel sessionId={claude.sessionId} className="h-full" />
         ) : (
@@ -128,7 +174,14 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
       </div>
 
       {hasTranscript && (
-        <div className="mt-1 flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1">
+          <EnlargeToggle
+            pressed={transcriptMaximized}
+            label="the transcript"
+            text="Transcript"
+            onToggle={() => setMaximized(transcriptMaximized ? null : 'transcript')}
+          />
+          <span className="flex-1" />
           <span
             aria-hidden
             className={cn(
@@ -140,14 +193,23 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
                   : 'bg-muted-foreground/40',
             )}
           />
-          <p className="text-xs text-muted-foreground">Live output</p>
-          <span className="flex-1" />
+          <p className="whitespace-nowrap text-xs text-muted-foreground">Live output</p>
+          {stripShown && (
+            <EnlargeToggle
+              pressed={terminalMaximized}
+              label="the live output"
+              onToggle={() => setMaximized(terminalMaximized ? null : 'terminal')}
+            />
+          )}
           <Button
             size="xs"
             variant="ghost"
             onClick={() => {
               setPaneError(null)
               setChoice(stripShown ? 'hidden' : 'shown')
+              // Showing the terminal while the transcript is enlarged would
+              // keep it out of view, so the split comes back with it.
+              if (!stripShown) setMaximized(null)
             }}
           >
             {stripShown ? 'Hide terminal' : 'Show terminal'}
@@ -162,9 +224,15 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
               'overflow-hidden rounded-xl bg-background ring-1 ring-border/60',
               // About 40 % of the chat, with a 280 px floor from `md` up. A
               // phone cannot spare that floor without starving the transcript,
-              // so there the share alone rules. The composer and the rows
-              // around it never shrink at all.
-              hasTranscript ? 'min-h-[280px] basis-[40%] max-md:min-h-0' : 'min-h-0 flex-1',
+              // so there the share alone rules. An enlarged pane takes the
+              // chat whole and the other pane gives way to its header. The
+              // composer and the rows around it never shrink at all.
+              terminalMaximized
+                ? 'min-h-0 flex-1'
+                : hasTranscript
+                  ? 'min-h-[280px] basis-[40%] max-md:min-h-0'
+                  : 'min-h-0 flex-1',
+              transcriptMaximized && 'hidden',
             )}
           >
             <XtermPane
