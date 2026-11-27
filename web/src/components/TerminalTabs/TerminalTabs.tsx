@@ -1,6 +1,8 @@
 import { X } from 'lucide-react'
+import { FOCUS_OUTLINE } from '@/lib/focus'
 import { cn } from '@/lib/utils'
 import { shellLabel, type TerminalInfo } from '@/lib/terminal'
+import { Button } from '@/components/ui/button'
 import { TerminalView } from '@/components/TerminalView/TerminalView'
 
 export interface TerminalTabsProps {
@@ -31,19 +33,20 @@ export function TerminalTabs({ terminals, activeId, onSelect, onClose }: Termina
                 role="tab"
                 aria-selected={selected}
                 aria-label={name}
-                className="px-3 py-1 font-medium"
+                className={`px-3 py-1 font-medium ${FOCUS_OUTLINE}`}
                 onClick={() => onSelect(terminal.id)}
               >
                 {shellLabel(terminal.shell)}
               </button>
-              <button
+              <Button
                 type="button"
+                variant="quiet"
+                size="icon-xs"
                 aria-label={`Close ${name}`}
-                className="rounded-r-lg px-2 py-1 text-muted-foreground hover:text-foreground"
                 onClick={() => onClose(terminal.id)}
               >
                 <X aria-hidden className="size-3.5" />
-              </button>
+              </Button>
             </span>
           )
         })}

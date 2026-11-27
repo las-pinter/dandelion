@@ -10,9 +10,9 @@ export interface AuthLayoutProps {
 export function AuthLayout({ title, description, children }: AuthLayoutProps) {
   return (
     <div className="flex min-h-svh items-center justify-center bg-background p-4 text-foreground">
-      <main className="w-full max-w-sm rounded-2xl border bg-card p-6">
+      <main className="w-full max-w-sm rounded-xl border bg-card p-6">
         <div className="mb-6 flex items-center gap-2">
-          <span aria-hidden className="size-2.5 rounded-full bg-brand" />
+          <span aria-hidden className="size-2.5 rounded-sm bg-primary" />
           <span className="font-heading text-lg font-semibold tracking-tight">Dandelion</span>
         </div>
         <h1 className="font-heading text-xl font-semibold">{title}</h1>

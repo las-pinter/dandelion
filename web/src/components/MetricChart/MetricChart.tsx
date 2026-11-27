@@ -38,9 +38,7 @@ export function MetricChart({
   return (
     <figure className={cn('min-w-0', className)}>
       <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </span>
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <span className="font-mono text-sm tabular-nums">
           {last ? formatValue(last.value, unit) : '—'}
           {unit && last && <span className="ml-1 text-xs text-muted-foreground">{unit}</span>}

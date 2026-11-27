@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { SELECT_ROW_CLASS } from '@/lib/row-control'
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,7 @@ export interface ServiceTableProps {
 }
 
 const SELECT_CLASS =
-  'h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+  'h-8 rounded-lg border border-input bg-card px-2 text-sm hover:border-muted-foreground focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
 /** Unit table with scope, type and state filters and allowlist-gated actions. */
 export function ServiceTable({
@@ -141,7 +142,7 @@ export function ServiceTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[46rem] text-left text-sm">
           <caption className="sr-only">systemd units</caption>
-          <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-muted/60 text-xs font-medium text-muted-foreground">
             <tr className="border-b">
               <th scope="col" className="py-2 pr-3 font-medium">
                 Unit
@@ -159,12 +160,12 @@ export function ServiceTable({
           </thead>
           <tbody className="divide-y">
             {visible.map((unit) => (
-              <tr key={`${unit.scope}:${unit.name}`}>
+              <tr key={`${unit.scope}:${unit.name}`} className="hover:bg-muted/40">
                 <td className="py-2 pr-3">
                   <button
                     type="button"
                     aria-pressed={selected?.scope === unit.scope && selected.name === unit.name}
-                    className="text-left font-medium hover:underline aria-pressed:text-primary"
+                    className={SELECT_ROW_CLASS}
                     onClick={() => onSelect(unit)}
                   >
                     {unit.name}
@@ -186,7 +187,9 @@ export function ServiceTable({
                       return (
                         <Button
                           key={action}
-                          variant={action === 'stop' || action === 'disable' ? 'ghost' : 'outline'}
+                          variant={
+                            action === 'stop' || action === 'disable' ? 'destructive' : 'outline'
+                          }
                           size="xs"
                           disabled={!permitted || inFlight}
                           title={permitted ? undefined : 'not in the sudo allowlist'}

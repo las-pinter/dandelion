@@ -201,7 +201,7 @@ export function DashboardPage() {
                 key={option}
                 type="button"
                 size="sm"
-                variant={range === option ? 'default' : 'ghost'}
+                variant={range === option ? 'outline' : 'quiet'}
                 aria-pressed={range === option}
                 onClick={() => setRange(option)}
               >

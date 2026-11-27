@@ -13,13 +13,13 @@ export interface PanelProps {
   children: ReactNode
 }
 
-/** A glass panel: the surface that holds metrics, lists, and details. */
+/** A panel: the flat surface that holds metrics, lists, and details. */
 export function Panel({ title, description, status, actions, className, children }: PanelProps) {
   const hasHeader = Boolean(title || description || status || actions)
   return (
     <section
       className={cn(
-        'rounded-2xl border bg-card p-4 text-card-foreground',
+        'rounded-xl border bg-card p-4 text-card-foreground',
         status === 'waiting' && 'border-status-waiting/40',
         className,
       )}

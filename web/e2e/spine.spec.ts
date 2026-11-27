@@ -94,6 +94,20 @@ test('an unauthenticated visitor signs in with the password', async ({ page }) =
   await page.getByRole('button', { name: 'Sign in' }).click()
 
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+
+  // The palette is keyboard-first, so its search field has to show focus too.
+  await page.keyboard.press('Control+k')
+  const search = page.getByPlaceholder('Search pages and actions…')
+  await expect(search).toBeFocused()
+  await expect
+    .poll(() =>
+      search.evaluate((element) => {
+        const wrapper = element.closest('[data-slot="input-group"]')
+        const style = getComputedStyle(wrapper ?? element)
+        return `${style.outlineStyle} ${style.outlineWidth}`
+      }),
+    )
+    .toBe('solid 2px')
 })
 
 /** Answers `/api/agents` with one synthetic agent, so no backend is needed. */
@@ -172,6 +186,7 @@ test('the agent card holds its composer at every size', async ({ page }) => {
     { width: 844, height: 390 },
     { width: 768, height: 600 },
     { width: 390, height: 844 },
+    { width: 360, height: 800 },
   ]
 
   // Reduced motion makes the selection scroll jump instead of animate, so the
@@ -279,4 +294,33 @@ test('a document reads on a phone', async ({ page }) => {
     () => document.documentElement.scrollWidth - window.innerWidth,
   )
   expect(sideways).toBeLessThanOrEqual(0)
+})
+
+/**
+ * A fresh browser with a dark OS and no saved choice: the pre-paint script
+ * has to pick the OS theme, and a focused control has to show its outline
+ * (the tokens set `outline-2`; a stray `outline-none` once defeated it).
+ */
+test.describe('theme and focus', () => {
+  test.use({ colorScheme: 'dark' })
+
+  test('a fresh visit follows the OS and a focused control keeps its outline', async ({ page }) => {
+    await page.goto('/login')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+
+    const outline = (locator: Locator) =>
+      locator.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return `${style.outlineStyle} ${style.outlineWidth}`
+      })
+
+    const password = page.getByLabel('Password')
+    await password.focus()
+    await expect.poll(() => outline(password)).toBe('solid 2px')
+
+    await page.keyboard.press('Tab')
+    const signIn = page.getByRole('button', { name: 'Sign in' })
+    await expect(signIn).toBeFocused()
+    await expect.poll(() => outline(signIn)).toBe('solid 2px')
+  })
 })

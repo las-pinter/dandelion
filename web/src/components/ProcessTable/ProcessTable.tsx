@@ -114,7 +114,7 @@ export function ProcessTable({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[44rem] text-left text-sm">
             <caption className="sr-only">Processes on this machine</caption>
-            <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-muted/60 text-xs font-medium text-muted-foreground">
               <tr className="border-b">
                 <th scope="col" className="py-2 pr-3 font-medium">
                   PID
@@ -147,7 +147,7 @@ export function ProcessTable({
                 const controllable = isControllable(process)
                 const busy = busyPid === process.pid
                 return (
-                  <tr key={process.pid} className={busy ? 'opacity-60' : undefined}>
+                  <tr key={process.pid} className={busy ? 'opacity-60' : 'hover:bg-muted/40'}>
                     <td className="py-2 pr-3 font-mono text-xs tabular-nums">{process.pid}</td>
                     <td className="py-2 pr-3">
                       <span className="block font-medium">{process.name}</span>
@@ -190,7 +190,7 @@ export function ProcessTable({
                           Kill
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="xs"
                           disabled={!controllable || busy}
                           aria-label={`Renice ${process.name} (${process.pid})`}

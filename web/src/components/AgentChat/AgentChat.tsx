@@ -71,7 +71,7 @@ function EnlargeToggle({
   return (
     <Button
       size="xs"
-      variant="ghost"
+      variant="outline"
       aria-pressed={pressed}
       aria-label={`Enlarge ${label}`}
       title={title}
@@ -203,7 +203,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
           )}
           <Button
             size="xs"
-            variant="ghost"
+            variant="outline"
             onClick={() => {
               setPaneError(null)
               setChoice(stripShown ? 'hidden' : 'shown')
@@ -221,7 +221,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
         <>
           <div
             className={cn(
-              'overflow-hidden rounded-xl bg-background ring-1 ring-border/60',
+              'overflow-hidden rounded-lg border border-border bg-card',
               // About 40 % of the chat, with a 280 px floor from `md` up. A
               // phone cannot spare that floor without starving the transcript,
               // so there the share alone rules. An enlarged pane takes the
@@ -263,7 +263,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
         />
       ) : (
         <form
-          className="flex shrink-0 items-end gap-2 rounded-xl border bg-background/60 p-1.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30"
+          className="flex shrink-0 items-end gap-2 rounded-lg border bg-card p-1.5 transition-[border-color,outline-color] duration-[120ms] ease-out has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-ring"
           onSubmit={(event) => {
             event.preventDefault()
             send()
@@ -284,7 +284,7 @@ export function AgentChat({ agent, claude, busy, onAct, className }: AgentChatPr
               send()
             }}
             placeholder="Send a prompt…"
-            className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0"
+            className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:outline-0"
           />
           <Button type="submit" size="sm" disabled={inFlight('prompt') || prompt.trim() === ''}>
             Send

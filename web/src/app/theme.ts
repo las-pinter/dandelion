@@ -1,25 +1,41 @@
 /**
- * Theme state. Dark is the default; the choice is persisted in localStorage
- * and applied to <html> before first paint by /theme-init.js (served from
- * web/public), because the CSP admits only same-origin scripts.
+ * Theme state. A saved choice wins; without one the theme follows the OS and
+ * keeps following it while the page is open. The choice is persisted in
+ * localStorage and applied to <html> before first paint by /theme-init.js
+ * (served from web/public), because the CSP admits only same-origin scripts.
  */
 export type Theme = 'dark' | 'light'
 
 export const THEME_STORAGE_KEY = 'dandelion-theme'
 
+/** The OS colour scheme media query. */
+export const DARK_QUERY = '(prefers-color-scheme: dark)'
+
 export function isTheme(value: unknown): value is Theme {
   return value === 'dark' || value === 'light'
 }
 
-/** Read the saved theme, falling back to dark when storage is unavailable or invalid. */
-export function readStoredTheme(storage?: Pick<Storage, 'getItem'>): Theme {
+/** Read the saved theme, or `null` when the owner has not chosen one. */
+export function readStoredTheme(storage?: Pick<Storage, 'getItem'>): Theme | null {
   try {
     const target = storage ?? window.localStorage
     const value = target.getItem(THEME_STORAGE_KEY)
-    return isTheme(value) ? value : 'dark'
+    return isTheme(value) ? value : null
   } catch {
-    return 'dark'
+    return null
   }
+}
+
+/** The theme the OS asks for; light when the browser cannot say. */
+export function systemTheme(
+  matches: (query: string) => boolean = (query) => window.matchMedia?.(query).matches ?? false,
+): Theme {
+  return matches(DARK_QUERY) ? 'dark' : 'light'
+}
+
+/** The theme to render: the saved choice, else the OS preference. */
+export function resolveTheme(stored: Theme | null, system: Theme): Theme {
+  return stored ?? system
 }
 
 /** Save the theme; storage can be blocked, so a failure is not an error. */

@@ -62,7 +62,7 @@ export function DocumentsList({ snapshot, selected, onSelect, className }: Docum
               <div className="mt-2 flex flex-col gap-3">
                 {collection.groups.map((group) => (
                   <div key={group.values.join('\u0000')}>
-                    <h4 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    <h4 className="text-[11px] font-medium text-muted-foreground">
                       {groupLabel(group.values)}
                     </h4>
                     <ul className="mt-1 flex flex-col">
@@ -79,7 +79,7 @@ export function DocumentsList({ snapshot, selected, onSelect, className }: Docum
                               aria-current={active ? 'true' : undefined}
                               className={cn(
                                 'flex w-full flex-col rounded-md px-2 py-1.5 text-left',
-                                'hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                                'hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                                 active && 'bg-muted',
                               )}
                             >
