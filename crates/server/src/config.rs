@@ -123,6 +123,44 @@ fn non_empty(value: Option<OsString>) -> Option<OsString> {
     value.filter(|value| !value.is_empty())
 }
 
+/// The folder plugin manifests are read from.
+///
+/// Order: `DANDELION_PLUGINS_DIR`, `$XDG_CONFIG_HOME/dandelion/plugins`, then
+/// `$HOME/.config/dandelion/plugins`. `None` when no source is set.
+#[must_use]
+pub fn plugins_dir() -> Option<PathBuf> {
+    choose_plugins_dir(
+        env::var_os("DANDELION_PLUGINS_DIR"),
+        env::var_os("XDG_CONFIG_HOME"),
+        env::var_os("HOME"),
+    )
+}
+
+fn choose_plugins_dir(
+    env_dir: Option<OsString>,
+    xdg: Option<OsString>,
+    home: Option<OsString>,
+) -> Option<PathBuf> {
+    if let Some(dir) = non_empty(env_dir) {
+        return Some(PathBuf::from(dir));
+    }
+    if let Some(dir) = non_empty(xdg) {
+        return Some(PathBuf::from(dir).join("dandelion").join("plugins"));
+    }
+    non_empty(home).map(|home| {
+        PathBuf::from(home)
+            .join(".config")
+            .join("dandelion")
+            .join("plugins")
+    })
+}
+
+/// The owner's home directory, which every manifest root must stay inside.
+#[must_use]
+pub fn home_dir() -> Option<PathBuf> {
+    non_empty(env::var_os("HOME")).map(PathBuf::from)
+}
+
 /// The SQLite file inside the data directory.
 #[must_use]
 pub fn database_path(data_dir: &Path) -> PathBuf {
@@ -143,7 +181,8 @@ mod tests {
     };
 
     use super::{
-        BindAddr, BindError, DataDirError, allowlist_path, choose_data_dir, database_path,
+        BindAddr, BindError, DataDirError, allowlist_path, choose_data_dir, choose_plugins_dir,
+        database_path,
     };
 
     fn parse(raw: &str) -> Result<BindAddr, BindError> {
@@ -255,6 +294,23 @@ mod tests {
             choose_data_dir(None, None, None, None),
             Err(DataDirError::NoCandidate)
         ));
+    }
+
+    #[test]
+    fn the_plugin_folder_follows_the_environment_order() {
+        assert_eq!(
+            choose_plugins_dir(os("/plugins"), os("/xdg"), os("/home")),
+            Some(PathBuf::from("/plugins"))
+        );
+        assert_eq!(
+            choose_plugins_dir(None, os("/xdg"), os("/home")),
+            Some(PathBuf::from("/xdg/dandelion/plugins"))
+        );
+        assert_eq!(
+            choose_plugins_dir(None, None, os("/home")),
+            Some(PathBuf::from("/home/.config/dandelion/plugins"))
+        );
+        assert_eq!(choose_plugins_dir(None, None, None), None);
     }
 
     #[test]

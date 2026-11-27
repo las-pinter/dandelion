@@ -7,6 +7,7 @@ use axum::{
     response::Response,
     routing::post,
 };
+use dandelion_documents::Documents;
 use dandelion_server::{
     agents::Agents,
     app::{build_router, router_for_tests},
@@ -37,6 +38,7 @@ async fn test_state() -> AppState {
         Containers::disabled(),
         Agents::disabled(),
         ClaudeMonitor::disabled(),
+        Documents::disabled(),
     )
 }
 

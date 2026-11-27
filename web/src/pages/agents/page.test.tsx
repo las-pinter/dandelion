@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { AgentsState } from '@/hooks/use-agents'
 import type { AgentAction, AgentInfo, AgentsSnapshot, ClaudeAgent } from '@/lib/agents'
-import { AgentsPage, page } from './page'
+import { AgentsPage } from './screen'
+import { page } from './page'
 
 const { useAgents } = vi.hoisted(() => ({
   useAgents: vi.fn<() => AgentsState>(),

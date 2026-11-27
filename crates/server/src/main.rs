@@ -24,6 +24,7 @@ use dandelion_server::{
     claude::ClaudeMonitor,
     config::{self, BindAddr},
     containers::Containers,
+    documents as documents_api,
     metrics::{self, Metrics},
     openapi::ApiDoc,
     services::{self, Services},
@@ -205,6 +206,8 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     let agents = Agents::connect().await;
     let claude = ClaudeMonitor::from_home();
     tracing::info!(enabled = claude.is_enabled(), "Claude Code session monitor");
+    let documents = documents_api::from_env();
+    tracing::info!(path = %documents.plugins_dir().display(), "document plugins");
 
     let state = AppState::new(
         audit,
@@ -215,6 +218,7 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
         containers,
         agents,
         claude,
+        documents,
     );
     metrics::collector::spawn(state.clone());
     agents::spawn_publisher(state.clone());

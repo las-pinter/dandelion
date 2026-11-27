@@ -45,6 +45,8 @@ use crate::auth::routes::{
         crate::agents::routes::action,
         crate::agents::routes::spawn,
         crate::agents::routes::screen,
+        crate::documents::snapshot,
+        crate::documents::file,
     ),
     components(schemas(
         crate::health::HealthResponse,
@@ -100,6 +102,12 @@ use crate::auth::routes::{
         dandelion_terminals::TerminalInfo,
         dandelion_terminals::TerminalLifecycle,
         dandelion_terminals::TerminalSize,
+        dandelion_documents::DocumentsSnapshot,
+        dandelion_documents::Collection,
+        dandelion_documents::Group,
+        dandelion_documents::DocumentEntry,
+        dandelion_documents::DocumentKind,
+        dandelion_documents::Warning,
         AuthStatus,
         MeResponse,
         SessionResponse,
@@ -248,6 +256,23 @@ mod tests {
         assert!(
             document["components"]["schemas"]["ClaudeAgent"].is_object(),
             "missing ClaudeAgent"
+        );
+    }
+
+    #[test]
+    fn document_lists_the_document_routes() {
+        let document = serde_json::to_value(ApiDoc::openapi()).expect("document serialises");
+
+        for path in ["/api/documents", "/api/documents/{id}/file"] {
+            assert!(document["paths"][path].is_object(), "missing {path}");
+        }
+        assert!(
+            document["components"]["schemas"]["DocumentsSnapshot"].is_object(),
+            "missing DocumentsSnapshot"
+        );
+        assert!(
+            document["components"]["schemas"]["DocumentEntry"].is_object(),
+            "missing DocumentEntry"
         );
     }
 

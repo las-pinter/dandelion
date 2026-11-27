@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { TerminalsState } from '@/hooks/use-terminals'
 import type { TerminalInfo } from '@/lib/terminal'
-import { TerminalPage, page } from './page'
+import { TerminalPage } from './screen'
+import { page } from './page'
 
 const { useTerminals } = vi.hoisted(() => ({
   useTerminals: vi.fn<() => TerminalsState>(),

@@ -5,7 +5,7 @@ import type { AgentsState } from '@/hooks/use-agents'
 import type { SystemMetricsState } from '@/hooks/use-system-metrics'
 import type { AgentsSnapshot } from '@/lib/agents'
 import type { MetricsRange } from '@/lib/metrics'
-import { DashboardPage } from './page'
+import { DashboardPage } from './screen'
 
 const { useSystemMetrics, useAgents } = vi.hoisted(() => ({
   useSystemMetrics: vi.fn<(range: MetricsRange) => SystemMetricsState>(),

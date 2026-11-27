@@ -331,6 +331,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists every valid collection and every manifest that was skipped. */
+        get: operations["documents_snapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents/{id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Serves one listed document, with headers that keep it outside this origin. */
+        get: operations["documents_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -673,6 +707,19 @@ export interface components {
             /** @description What a waiting session is waiting for, when reported. */
             waitingFor?: string | null;
         };
+        /** @description One collection a manifest declares. */
+        Collection: {
+            /** @description Documents grouped by the manifest's capture values. */
+            groups: components["schemas"]["Group"][];
+            /** @description Icon name from the manifest's fixed vocabulary. */
+            icon: string;
+            /** @description Manifest id (the file stem). */
+            id: string;
+            /** @description Display name. */
+            name: string;
+            /** @description The root as the manifest wrote it. */
+            root: string;
+        };
         /**
          * @description One container action.
          * @enum {string}
@@ -793,6 +840,37 @@ export interface components {
             /** @description Daemon version, when it answered. */
             server_version?: string | null;
         };
+        /** @description One document in a collection. */
+        DocumentEntry: {
+            /** @description Whether the file is rendered Markdown or sandboxed HTML. */
+            kind: components["schemas"]["DocumentKind"];
+            /**
+             * Format: int64
+             * @description Modification time as a Unix timestamp in milliseconds.
+             */
+            modified_ms: number;
+            /** @description Path relative to the collection root, with `/` separators. */
+            path: string;
+            /**
+             * Format: int64
+             * @description Size in bytes.
+             */
+            size: number;
+            /** @description A readable title derived from the file name. */
+            title: string;
+        };
+        /**
+         * @description How a document is rendered.
+         * @enum {string}
+         */
+        DocumentKind: "html" | "markdown";
+        /** @description Everything the Documents page shows, valid collections and warnings. */
+        DocumentsSnapshot: {
+            /** @description Collections from valid manifests, ordered by name. */
+            collections: components["schemas"]["Collection"][];
+            /** @description Manifest files that were skipped, with the reason. */
+            warnings: components["schemas"]["Warning"][];
+        };
         /** @description Finishes a passkey login. */
         FinishAuthenticationRequest: {
             /** @description Id from the start call. */
@@ -808,6 +886,13 @@ export interface components {
             credential: Record<string, never>;
             /** @description The single-use setup token. */
             token: string;
+        };
+        /** @description One group of documents: the capture values and the documents under them. */
+        Group: {
+            /** @description Documents in the group, newest first. */
+            documents: components["schemas"]["DocumentEntry"][];
+            /** @description Capture values in the manifest's `group` order. */
+            values: string[];
         };
         /** @description Current health of the server. */
         HealthResponse: {
@@ -1433,6 +1518,13 @@ export interface components {
          * @enum {string}
          */
         UnitScope: "user" | "system";
+        /** @description A manifest file that could not be used. */
+        Warning: {
+            /** @description The file name in the plugin folder. */
+            file: string;
+            /** @description Why it was skipped. */
+            problem: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2134,6 +2226,86 @@ export interface operations {
             };
             /** @description Docker is unavailable */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    documents_snapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Collections and manifest warnings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentsSnapshot"];
+                };
+            };
+            /** @description The listing task failed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    documents_file: {
+        parameters: {
+            query: {
+                /** @description Path relative to the collection root */
+                path: string;
+            };
+            header?: never;
+            path: {
+                /** @description Collection id (the manifest file stem) */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document, as an opaque-origin sandbox or plain text */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such collection or listed document */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The document is larger than the serving cap */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The document could not be read */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };

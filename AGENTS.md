@@ -16,6 +16,10 @@ libraries once: `pnpm --dir web exec playwright install --with-deps chromium`.
 directory and fails on any working-tree change, so commit the generated files
 before running the gate.
 
+`just check` is the cheap half of the gate (format, types, lint, web tests). Run
+it after each edit batch: a type error or a formatting slip otherwise fails
+`just ci` minutes in, after the Rust build.
+
 ## Branching
 
 - Work is sequential on the long-lived `dev` branch, and `dev` is pushed
@@ -34,7 +38,7 @@ before running the gate.
 
 - `crates/<domain>/` — one Rust crate per domain, package `dandelion-<domain>`. `server` owns HTTP, WebSocket, auth, and wiring; domain crates own their logic and expose plain Rust APIs. `core` holds types shared by several crates.
 - `web/src/components/<Name>/` — one component per folder: `<Name>.tsx`, `<Name>.test.tsx`, `<Name>.stories.tsx` (Storybook, `just storybook`), and its helpers. `components/ui/` holds generated shadcn primitives (add with `pnpm dlx shadcn add`); app code imports `cn` from `@/lib/utils`.
-- `web/src/pages/<screen>/page.tsx` — a thin screen that composes components and exports `page: PageDefinition`. The page registry (`web/src/app/page-registry.ts`) discovers it: routes and navigation never need a manual edit.
+- `web/src/pages/<screen>/page.tsx` — the metadata and a `lazy()` wrapper around `screen.tsx`, which composes the components; the router suspends while a page loads (ADR-0008). The page registry (`web/src/app/page-registry.ts`) discovers it: routes and navigation never need a manual edit.
 - `web/src/api/gen/` — generated from the server's OpenAPI. Regenerate it, never edit it.
 - `web/src/lib/`, `web/src/hooks/` — logic shared by several components.
 - `web/e2e/` — Playwright specs, run against a scratch server by `just e2e`;
@@ -46,6 +50,7 @@ before running the gate.
 
 - Rust: workspace lints (clippy pedantic, `unsafe` forbidden) apply to every crate via `[lints] workspace = true`. Errors are `thiserror` types in libraries, `anyhow` only in the binary.
 - Web: strict TypeScript, no `any`. Style through Tailwind and the design tokens in `web/src/styles/tokens.css`; follow `docs/design.md`.
-- Files stay under 500 lines; split by responsibility before that.
+- Files stay under 500 lines, and integration test files under 700; split by
+  responsibility before that.
 - Every mutating API action writes an audit log entry.
 - Tests sit next to the code: Rust `#[cfg(test)]` modules or `crates/<domain>/tests/`, web `*.test.ts(x)` beside the source.

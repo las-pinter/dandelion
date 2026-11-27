@@ -1,6 +1,6 @@
 # 0006. A read-only transcript socket
 
-- **Status:** accepted
+- **Status:** accepted; the bundle consequence is superseded by ADR-0008.
 - **Date:** 2026-11-25
 
 ## Context

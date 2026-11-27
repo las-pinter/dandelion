@@ -18,7 +18,44 @@ export E2E_PORT="$port"
 rm -rf target/e2e
 mkdir -p target/e2e
 
-DANDELION_PUBLIC_URL="http://localhost:$port" \
+# A fixture collection for the sandbox test. The page tries to reach a public
+# API route and reports the verdict from inside its own frame. The server runs
+# with a scratch HOME, so the manifest root sits under it and the test does
+# not depend on where the checkout lives.
+scratch_home="$root/target/e2e/home"
+docs_root="$scratch_home/documents"
+mkdir -p "$docs_root/d" target/e2e/plugins
+cat > "$docs_root/d/sandbox-probe.html" <<'HTML'
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Sandbox probe</title></head>
+  <body>
+    <p>Sandbox probe</p>
+    <p data-testid="verdict">checking</p>
+    <script>
+      const verdict = document.querySelector('[data-testid="verdict"]')
+      fetch('/api/health')
+        .then(() => { verdict.textContent = 'REACHED' })
+        .catch(() => { verdict.textContent = 'BLOCKED' })
+    </script>
+  </body>
+</html>
+HTML
+printf '# Probe notes\n\nA fixture document.\n' > "$docs_root/d/probe-notes.md"
+cat > target/e2e/plugins/probe-visuals.json <<JSON
+{
+  "schema": 1,
+  "id": "probe-visuals",
+  "name": "Probe visuals",
+  "root": "$docs_root",
+  "include": ["**/*.{html,md}"],
+  "group": []
+}
+JSON
+
+HOME="$scratch_home" \
+  DANDELION_PUBLIC_URL="http://localhost:$port" \
+  DANDELION_PLUGINS_DIR="$root/target/e2e/plugins" \
   ./target/debug/dandelion serve --bind "127.0.0.1:$port" --data-dir target/e2e/data \
   > target/e2e/server.log 2>&1 &
 server=$!

@@ -2,6 +2,8 @@
 
 use std::sync::Arc;
 
+use dandelion_documents::Documents;
+
 use crate::{
     agents::Agents, audit::AuditLog, auth::Auth, claude::ClaudeMonitor, containers::Containers,
     metrics::Metrics, services::Services, terminal::Terminals, ws::hub::Hub,
@@ -29,6 +31,8 @@ pub struct AppState {
     pub agents: Agents,
     /// Claude Code sessions, their tokens, and what they wait for.
     pub claude: ClaudeMonitor,
+    /// Document collections declared by plugin manifests.
+    pub documents: Documents,
 }
 
 impl AppState {
@@ -46,6 +50,7 @@ impl AppState {
         containers: Containers,
         agents: Agents,
         claude: ClaudeMonitor,
+        documents: Documents,
     ) -> Self {
         Self {
             audit,
@@ -57,6 +62,7 @@ impl AppState {
             terminals: Terminals::default(),
             agents,
             claude,
+            documents,
         }
     }
 

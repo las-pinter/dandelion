@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ProcessesState } from '@/hooks/use-processes'
 import type { ProcessInfo } from '@/lib/processes'
-import { ProcessesPage, page } from './page'
+import { ProcessesPage } from './screen'
+import { page } from './page'
 
 const { useProcesses } = vi.hoisted(() => ({
   useProcesses: vi.fn<() => ProcessesState>(),

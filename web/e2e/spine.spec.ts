@@ -216,3 +216,67 @@ test('the agent card holds its composer at every size', async ({ page }) => {
     }
   }
 })
+
+test('a document renders in an opaque-origin sandbox that cannot reach the API', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/login$/)
+  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+
+  await page.goto('/documents')
+  await expect(page.getByRole('heading', { name: 'Probe visuals' })).toBeVisible()
+
+  // HTML documents go through the sandboxed frame; the fixture page tries a
+  // public API route and reports its own verdict from inside the frame.
+  await page.getByRole('button', { name: /Sandbox probe/ }).click()
+  const frame = page.locator('iframe')
+  await expect(frame).toHaveAttribute('sandbox', 'allow-scripts')
+  await expect(frame).toHaveAttribute('sandbox', /^(?!.*allow-same-origin).*$/)
+  await expect(page.frameLocator('iframe').getByTestId('verdict')).toHaveText('BLOCKED')
+
+  // The route itself answers with the CSP that creates the opaque origin.
+  const response = await page.request.get(
+    '/api/documents/probe-visuals/file?path=d%2Fsandbox-probe.html',
+  )
+  const policy = response.headers()['content-security-policy'] ?? ''
+  expect(policy).toContain('sandbox allow-scripts')
+  expect(policy).not.toContain('allow-same-origin')
+  expect(policy).toContain("connect-src 'none'")
+
+  // Markdown renders in the app instead of a frame.
+  await page.getByRole('button', { name: /Probe notes/ }).click()
+  await expect(page.getByRole('heading', { name: 'Probe notes', level: 1 })).toBeVisible()
+  await expect(page.locator('iframe')).toHaveCount(0)
+})
+
+test('a document reads on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/login$/)
+  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+
+  await page.goto('/documents')
+  await page.getByRole('button', { name: /Sandbox probe/ }).click()
+
+  const frame = page.locator('iframe')
+  await expect(frame).toBeVisible()
+  await expect(page.frameLocator('iframe').getByTestId('verdict')).toHaveText('BLOCKED')
+
+  // The list sits above the viewer, the viewer keeps a readable height, and
+  // the page never scrolls sideways.
+  const list = await page.getByRole('region', { name: 'Probe visuals' }).boundingBox()
+  const viewer = await frame.boundingBox()
+  if (!list || !viewer) throw new Error('the list or the viewer has no box')
+  expect(list.y + list.height).toBeLessThanOrEqual(viewer.y + 1)
+  expect(viewer.height).toBeGreaterThanOrEqual(300)
+
+  const sideways = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  )
+  expect(sideways).toBeLessThanOrEqual(0)
+})

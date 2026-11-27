@@ -11,6 +11,7 @@ pub mod backup;
 pub mod claude;
 pub mod config;
 pub mod containers;
+pub mod documents;
 pub mod health;
 pub mod metrics;
 pub mod openapi;

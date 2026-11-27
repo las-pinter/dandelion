@@ -19,20 +19,21 @@ dev-web:
     {{web}} dev
 
 # Expose loopback Dandelion on the tailnet through Tailscale's HTTPS proxy.
-# `serve` writes host configuration, so it needs root; a sudo prompt is
-# expected. Dandelion itself never changes host networking.
 tailnet-serve:
+    # `serve` writes host configuration, so it needs root. Dandelion itself
+    # never changes host networking.
     sudo tailscale serve --bg 7443
 
 # One-time alternative: let the current user manage serve config without sudo.
-# After this, plain `tailscale serve --bg 7443` works.
 tailnet-operator:
+    # After this, plain `tailscale serve --bg 7443` works without a prompt.
     sudo tailscale set --operator=$USER
 
 # Install the sudoers drop-in generated from <data-dir>/sudo-allowlist.toml.
-# Run it again after changing the allowlist and restart the server. Needs a
-# password once. Pass `--data-dir /path` when the server does not use the default.
 install-sudoers *args:
+    # Needs a password once; rerun after changing the allowlist and restart
+    # the server. Pass `--data-dir /path` when the server does not use the
+    # default.
     mkdir -p target
     cargo run --quiet --locked -p dandelion-server -- sudoers {{args}} > target/dandelion-services.sudoers
     sudo visudo -cf target/dandelion-services.sudoers
@@ -63,20 +64,24 @@ typecheck:
     {{web}} typecheck
 
 # Regenerate the OpenAPI document and its TypeScript client.
-# dlx runs the generator with its own TypeScript 5; the app builds with TypeScript 7,
-# which no longer ships the compiler API the generator needs.
 gen:
+    # dlx runs the generator with its own TypeScript 5; the app builds with
+    # TypeScript 7, which no longer ships the compiler API the generator needs.
     mkdir -p target web/src/api/gen
     cargo run --quiet --locked -p dandelion-server -- openapi > target/openapi.json
     pnpm dlx openapi-typescript@7.13.0 target/openapi.json -o web/src/api/gen/schema.d.ts
     cargo run --quiet --locked -p dandelion-server -- ts-types web/src/api/gen/ws
 
 # Fail when generated files are stale, missing, orphaned, or untracked.
-# Regenerating from an empty directory makes removed types leave no orphans.
 gen-check:
+    # Regenerating from an empty directory makes removed types leave no orphans.
     rm -rf web/src/api/gen
     just gen
     @test -z "$(git status --porcelain -- web/src/api/gen)"
+
+# Fast checks after an edit batch: format, types, lint, web tests (seconds).
+check: fmt-check typecheck lint
+    {{web}} test
 
 # Run all tests.
 test:
@@ -139,9 +144,9 @@ backup *args:
     @set -a; [ -r ~/.config/dandelion/env ] && . ~/.config/dandelion/env; set +a; ~/.local/bin/dandelion backup {{args}}
 
 # End-to-end smoke tests in Chromium against a scratch data directory.
-# A fresh Linux installs the browser's system libraries once:
-#   pnpm --dir web exec playwright install --with-deps chromium
 e2e:
+    # A fresh Linux also installs the browser's system libraries once:
+    #   pnpm --dir web exec playwright install --with-deps chromium
     {{web}} exec playwright install chromium
     {{web}} build
     cargo build --locked -p dandelion-server

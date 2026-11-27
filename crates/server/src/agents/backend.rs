@@ -101,6 +101,7 @@ mod tests {
 
     use std::sync::atomic::{AtomicU32, Ordering};
 
+    use dandelion_documents::Documents;
     use dandelion_terminals::{TerminalBackend, herdr_core::HerdrCoreBackend};
 
     use super::{TOPIC, adopt, retry_until_available, spawn_backend_retry_with};
@@ -124,6 +125,7 @@ mod tests {
             Containers::disabled(),
             Agents::disabled(),
             ClaudeMonitor::disabled(),
+            Documents::disabled(),
         )
     }
 

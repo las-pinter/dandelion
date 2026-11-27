@@ -1,5 +1,6 @@
 //! Metrics endpoints and collector-ingest acceptance tests.
 
+use dandelion_documents::Documents;
 use std::time::Duration;
 
 use axum::{
@@ -47,6 +48,7 @@ async fn test_state() -> AppState {
         Containers::disabled(),
         Agents::disabled(),
         ClaudeMonitor::disabled(),
+        Documents::disabled(),
     )
 }
 
