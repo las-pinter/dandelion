@@ -251,3 +251,32 @@ test('a document renders in an opaque-origin sandbox that cannot reach the API',
   await expect(page.getByRole('heading', { name: 'Probe notes', level: 1 })).toBeVisible()
   await expect(page.locator('iframe')).toHaveCount(0)
 })
+
+test('a document reads on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/login$/)
+  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+
+  await page.goto('/documents')
+  await page.getByRole('button', { name: /Sandbox probe/ }).click()
+
+  const frame = page.locator('iframe')
+  await expect(frame).toBeVisible()
+  await expect(page.frameLocator('iframe').getByTestId('verdict')).toHaveText('BLOCKED')
+
+  // The list sits above the viewer, the viewer keeps a readable height, and
+  // the page never scrolls sideways.
+  const list = await page.getByRole('region', { name: 'Probe visuals' }).boundingBox()
+  const viewer = await frame.boundingBox()
+  if (!list || !viewer) throw new Error('the list or the viewer has no box')
+  expect(list.y + list.height).toBeLessThanOrEqual(viewer.y + 1)
+  expect(viewer.height).toBeGreaterThanOrEqual(300)
+
+  const sideways = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  )
+  expect(sideways).toBeLessThanOrEqual(0)
+})
