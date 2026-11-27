@@ -70,7 +70,7 @@ export function AnswerBar({ busy, inputRef, onAct }: AnswerBarProps) {
           Skip (Escape)
         </Button>
       </div>
-      <div className="flex items-end gap-2 rounded-xl border bg-background/60 p-1.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30">
+      <div className="flex items-end gap-2 rounded-lg border bg-card p-1.5 transition-[border-color,outline-color] duration-[120ms] ease-out has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-ring">
         <label htmlFor={fieldId} className="sr-only">
           Answer
         </label>
@@ -86,7 +86,7 @@ export function AnswerBar({ busy, inputRef, onAct }: AnswerBarProps) {
             send()
           }}
           placeholder="Type an answer into the question"
-          className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0"
+          className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:outline-0"
         />
         <Button type="submit" size="sm" disabled={busy || text.trim() === ''}>
           Answer

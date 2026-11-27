@@ -1,11 +1,12 @@
 /*
  * Design tokens: the single source of colors, radii, effects, and the layout
  * chrome a full-height surface measures itself against.
- * Direction: Mission Control (see docs/design.md). Dark is the primary theme;
- * light is the alternate. Components use the semantic names only.
+ * Direction: flat surfaces, hairline borders, one accent for live activity
+ * (see docs/design.md). Light and dark are both complete; the OS chooses until
+ * the owner sets a theme. Components use the semantic names only.
  */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
   /* The app's fixed chrome, owned here so a panel can size itself between the
      bars: the sticky top bar and the phone tab bar (its content height plus
@@ -19,47 +20,45 @@
   --app-tab-bar: calc(3.0625rem + env(safe-area-inset-bottom));
   --app-scroll-offset: calc(var(--app-top-bar) + 0.5rem);
 
-  --background: #f6f7f9;
-  --foreground: #0b0e12;
+  --background: #f4f4f2;
+  --foreground: #16181b;
   --card: #ffffff;
-  --card-foreground: #0b0e12;
+  --card-foreground: #16181b;
   --popover: #ffffff;
-  --popover-foreground: #0b0e12;
-  --primary: #4d6b00;
-  --primary-foreground: #ffffff;
-  --secondary: #eceef2;
-  --secondary-foreground: #0b0e12;
-  --muted: #eceef2;
-  --muted-foreground: #5a6472;
-  --accent: #e9ecf1;
-  --accent-foreground: #0b0e12;
-  --destructive: #d23b3b;
-  --border: #e2e5ea;
-  --input: #d5d9e0;
-  --ring: #4d6b00;
+  --popover-foreground: #16181b;
+  --primary: #1b1d20;
+  --primary-foreground: #f7f7f5;
+  --secondary: #ececea;
+  --secondary-foreground: #16181b;
+  --muted: #ececea;
+  --muted-foreground: #5c625f;
+  --accent: #e7e8e5;
+  --accent-foreground: #16181b;
+  --destructive: #b3261e;
+  --border: #dcdedb;
+  --input: #848b86;
+  --ring: #1b1d20;
 
-  --brand: #d9f75a;
-  --glow: 0 0 0 1px rgb(77 107 0 / 0.15);
-  --status-working: #4d6b00;
-  --status-waiting: #a35f00;
-  --status-idle: #5a6472;
-  --status-done: #0a7f91;
-  --status-error: #d23b3b;
+  --status-working: #3f6b00;
+  --status-waiting: #8a5300;
+  --status-idle: #5c625f;
+  --status-done: #0a6b78;
+  --status-error: #b3261e;
 
-  --chart-1: #4d6b00;
-  --chart-2: #0a7f91;
-  --chart-3: #a35f00;
-  --chart-4: #6d4fd1;
-  --chart-5: #5a6472;
+  --chart-1: #3f6b00;
+  --chart-2: #0a6b78;
+  --chart-3: #8a5300;
+  --chart-4: #6746c3;
+  --chart-5: #5c625f;
 
-  --sidebar: #eef0f3;
-  --sidebar-foreground: #0b0e12;
-  --sidebar-primary: #4d6b00;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e2e5ea;
-  --sidebar-accent-foreground: #0b0e12;
-  --sidebar-border: #e2e5ea;
-  --sidebar-ring: #4d6b00;
+  --sidebar: #edeee9;
+  --sidebar-foreground: #16181b;
+  --sidebar-primary: #1b1d20;
+  --sidebar-primary-foreground: #f7f7f5;
+  --sidebar-accent: #e2e4de;
+  --sidebar-accent-foreground: #16181b;
+  --sidebar-border: #dcdedb;
+  --sidebar-ring: #1b1d20;
 }
 
 /* The bottom navigation exists only below `md`, so from `md` up nothing has to
@@ -71,45 +70,43 @@
 }
 
 .dark {
-  --background: #07090d;
-  --foreground: #e8ecf2;
-  --card: #0e1117;
-  --card-foreground: #e8ecf2;
-  --popover: #11151c;
-  --popover-foreground: #e8ecf2;
+  --background: #0c0e11;
+  --foreground: #e8ebe6;
+  --card: #14171b;
+  --card-foreground: #e8ebe6;
+  --popover: #171b20;
+  --popover-foreground: #e8ebe6;
   --primary: #d9f75a;
-  --primary-foreground: #0b0e12;
-  --secondary: #161b23;
-  --secondary-foreground: #e8ecf2;
-  --muted: #141922;
-  --muted-foreground: #8c96a5;
-  --accent: #161b23;
-  --accent-foreground: #f2f5f9;
-  --destructive: #ff5d5d;
-  --border: rgb(255 255 255 / 0.08);
-  --input: rgb(255 255 255 / 0.12);
+  --primary-foreground: #10130a;
+  --secondary: #1a1e23;
+  --secondary-foreground: #e8ebe6;
+  --muted: #1a1e23;
+  --muted-foreground: #9aa1a9;
+  --accent: #1d2228;
+  --accent-foreground: #eef1eb;
+  --destructive: #ff6b61;
+  --border: #2a2f35;
+  --input: #6b7480;
   --ring: #d9f75a;
 
-  --brand: #d9f75a;
-  --glow: 0 0 24px rgb(217 247 90 / 0.25);
   --status-working: #d9f75a;
   --status-waiting: #ffb547;
-  --status-idle: #7d8797;
+  --status-idle: #9aa1a9;
   --status-done: #5ae4f7;
-  --status-error: #ff5d5d;
+  --status-error: #ff6b61;
 
   --chart-1: #d9f75a;
   --chart-2: #5ae4f7;
   --chart-3: #ffb547;
   --chart-4: #b69cff;
-  --chart-5: #8c96a5;
+  --chart-5: #9aa1a9;
 
-  --sidebar: #07090d;
-  --sidebar-foreground: #c9d1dc;
+  --sidebar: #0f1216;
+  --sidebar-foreground: #c3c9c3;
   --sidebar-primary: #d9f75a;
-  --sidebar-primary-foreground: #0b0e12;
-  --sidebar-accent: rgb(217 247 90 / 0.08);
-  --sidebar-accent-foreground: #f2f5f9;
-  --sidebar-border: rgb(255 255 255 / 0.06);
+  --sidebar-primary-foreground: #10130a;
+  --sidebar-accent: #1d2228;
+  --sidebar-accent-foreground: #eef1eb;
+  --sidebar-border: #2a2f35;
   --sidebar-ring: #d9f75a;
 }

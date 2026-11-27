@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router'
 import type { PageDefinition } from '@/app/page-registry'
+import { FOCUS_OUTLINE } from '@/lib/focus'
 import { cn } from '@/lib/utils'
 import { useLiveSample, type LiveSampleState } from '@/hooks/use-live-sample'
 import { formatBytes } from '@/lib/metrics'
@@ -14,10 +15,8 @@ export interface AppShellSidebarProps {
 function HostCard({ snapshot, connected }: LiveSampleState) {
   const cores = snapshot?.cpu.per_core_percent.length
   return (
-    <div className="m-3 rounded-xl border border-sidebar-border bg-card p-3">
-      <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-        Host
-      </p>
+    <div className="m-3 rounded-lg border border-sidebar-border bg-card p-3">
+      <p className="text-[11px] font-medium text-muted-foreground">Host</p>
       <p className="mt-1 truncate font-mono text-sm font-medium">
         {snapshot && cores !== undefined
           ? `${cores} cores · ${formatBytes(snapshot.memory.total_bytes)}`
@@ -45,7 +44,7 @@ export function AppShellSidebar({ pages, host }: AppShellSidebarProps) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
       <div className="flex h-[var(--app-top-bar)] shrink-0 items-center gap-2 border-b border-sidebar-border px-4">
-        <span aria-hidden className="size-2.5 rounded-full bg-brand" />
+        <span aria-hidden className="size-2.5 rounded-sm bg-primary" />
         <span className="font-heading text-base font-semibold tracking-tight">Dandelion</span>
       </div>
       <nav aria-label="Primary" className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
@@ -56,10 +55,10 @@ export function AppShellSidebar({ pages, host }: AppShellSidebarProps) {
             aria-label={badge !== undefined ? `${title}, ${badge} notifications` : undefined}
             className={({ isActive }) =>
               cn(
-                'flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors duration-150',
+                `flex min-h-11 items-center gap-3 rounded-lg border border-transparent px-3 text-sm transition-colors duration-150 ${FOCUS_OUTLINE}`,
                 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                 isActive &&
-                  'bg-sidebar-accent font-medium text-sidebar-accent-foreground [&_svg]:text-sidebar-primary',
+                  'border-sidebar-border bg-card font-medium text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)] [&_svg]:text-primary',
               )
             }
           >

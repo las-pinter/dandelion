@@ -8,6 +8,7 @@ import {
   type AgentInfo,
   type ClaudeAgent,
 } from '@/lib/agents'
+import { SELECT_ROW_CLASS } from '@/lib/row-control'
 
 export interface AgentListProps {
   agents: AgentInfo[]
@@ -24,7 +25,7 @@ export function AgentList({ agents, unmanaged = [], selectedId, onSelect }: Agen
     <div className="overflow-x-auto">
       <table className="w-full min-w-[40rem] text-left text-sm">
         <caption className="sr-only">Live agents</caption>
-        <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="bg-muted/60 text-xs font-medium text-muted-foreground">
           <tr className="border-b">
             <th scope="col" className="py-2 pr-3 font-medium">
               Agent
@@ -39,12 +40,16 @@ export function AgentList({ agents, unmanaged = [], selectedId, onSelect }: Agen
         </thead>
         <tbody className="divide-y">
           {agents.map((agent) => (
-            <tr key={agent.id}>
+            <tr
+              key={agent.id}
+              aria-current={selectedId === agent.id ? 'true' : undefined}
+              className="hover:bg-muted/40 aria-[current=true]:bg-muted/60"
+            >
               <td className="py-2 pr-3">
                 <button
                   type="button"
                   aria-pressed={selectedId === agent.id}
-                  className="text-left font-medium hover:underline aria-pressed:text-primary"
+                  className={SELECT_ROW_CLASS}
                   onClick={() => onSelect(agent.id)}
                 >
                   {agentLabel(agent)}
@@ -67,12 +72,12 @@ export function AgentList({ agents, unmanaged = [], selectedId, onSelect }: Agen
             </tr>
           ))}
           {unmanaged.map((session) => (
-            <tr key={session.sessionId}>
+            <tr key={session.sessionId} className="hover:bg-muted/40">
               <td className="py-2 pr-3">
                 <button
                   type="button"
                   aria-pressed={selectedId === `claude:${session.sessionId}`}
-                  className="text-left font-medium hover:underline aria-pressed:text-primary"
+                  className={SELECT_ROW_CLASS}
                   onClick={() => onSelect(`claude:${session.sessionId}`)}
                 >
                   {claudeLabel(session)}

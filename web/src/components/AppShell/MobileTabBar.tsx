@@ -2,6 +2,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink } from 'react-router'
 import type { PageDefinition } from '@/app/page-registry'
+import { FOCUS_OUTLINE } from '@/lib/focus'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -9,8 +10,8 @@ const MAX_TABS = 4
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'flex min-h-12 min-w-11 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors',
-    isActive ? 'text-primary' : 'text-muted-foreground',
+    `flex min-h-12 min-w-11 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[11px] transition-colors duration-150 ${FOCUS_OUTLINE}`,
+    isActive ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground',
   )
 
 export interface MobileTabBarProps {
@@ -28,7 +29,7 @@ export function MobileTabBar({ pages }: MobileTabBarProps) {
       <nav
         aria-label="Primary mobile"
         data-app-chrome="tab"
-        className="fixed inset-x-0 bottom-0 z-40 flex min-h-[var(--app-tab-bar)] border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex min-h-[var(--app-tab-bar)] gap-1 border-t bg-card px-1.5 pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {visible.map(({ path, title, icon: Icon }) => (
           <NavLink key={path} to={path} className={tabClass}>
@@ -42,7 +43,7 @@ export function MobileTabBar({ pages }: MobileTabBarProps) {
             onClick={() => setShowMore(true)}
             aria-haspopup="dialog"
             aria-expanded={showMore}
-            className="flex min-h-12 min-w-11 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 text-[11px] text-muted-foreground"
+            className={`flex min-h-12 min-w-11 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[11px] text-muted-foreground ${FOCUS_OUTLINE}`}
           >
             <MoreHorizontal aria-hidden className="size-5 shrink-0" />
             <span className="w-full truncate text-center">More</span>
@@ -53,7 +54,7 @@ export function MobileTabBar({ pages }: MobileTabBarProps) {
         <DialogContent
           showCloseButton={false}
           aria-describedby={undefined}
-          className="top-auto bottom-0 left-0 max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-2xl pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:max-w-none"
+          className="top-auto bottom-0 left-0 max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-xl pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:max-w-none"
         >
           <DialogHeader>
             <DialogTitle>More pages</DialogTitle>

@@ -1,9 +1,14 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   applyTheme,
   currentTheme,
+  DARK_QUERY,
   isTheme,
   readStoredTheme,
+  resolveTheme,
   storeTheme,
+  systemTheme,
   THEME_STORAGE_KEY,
 } from './theme'
 
@@ -27,27 +32,27 @@ describe('isTheme', () => {
 })
 
 describe('readStoredTheme', () => {
-  it('defaults to dark when nothing is stored', () => {
-    expect(readStoredTheme(storage(() => null))).toBe('dark')
+  it('is null when nothing is stored, so the OS decides', () => {
+    expect(readStoredTheme(storage(() => null))).toBeNull()
   })
 
   it('reads a valid stored theme', () => {
     expect(readStoredTheme(storage(() => 'light'))).toBe('light')
   })
 
-  it('falls back to dark on an invalid value', () => {
-    expect(readStoredTheme(storage(() => 'neon'))).toBe('dark')
+  it('is null on an invalid value', () => {
+    expect(readStoredTheme(storage(() => 'neon'))).toBeNull()
   })
 
-  it('falls back to dark when storage throws', () => {
+  it('is null when storage throws', () => {
     const throwing = storage(() => {
       throw new DOMException('blocked')
     })
 
-    expect(readStoredTheme(throwing)).toBe('dark')
+    expect(readStoredTheme(throwing)).toBeNull()
   })
 
-  it('falls back to dark when localStorage itself throws', () => {
+  it('is null when localStorage itself throws', () => {
     const original = Object.getOwnPropertyDescriptor(window, 'localStorage')
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
@@ -56,11 +61,25 @@ describe('readStoredTheme', () => {
       },
     })
     try {
-      expect(readStoredTheme()).toBe('dark')
+      expect(readStoredTheme()).toBeNull()
     } finally {
       if (original) Object.defineProperty(window, 'localStorage', original)
       else Reflect.deleteProperty(window, 'localStorage')
     }
+  })
+})
+
+describe('systemTheme and resolveTheme', () => {
+  it('reads the OS colour scheme', () => {
+    expect(systemTheme(() => true)).toBe('dark')
+    expect(systemTheme(() => false)).toBe('light')
+  })
+
+  it('prefers a saved choice over the OS', () => {
+    expect(resolveTheme('light', 'dark')).toBe('light')
+    expect(resolveTheme('dark', 'light')).toBe('dark')
+    expect(resolveTheme(null, 'dark')).toBe('dark')
+    expect(resolveTheme(null, 'light')).toBe('light')
   })
 })
 
@@ -132,5 +151,14 @@ describe('applyTheme', () => {
       meta.remove()
       document.documentElement.style.removeProperty('--background')
     }
+  })
+})
+
+describe('pre-paint script', () => {
+  const script = readFileSync(resolve(process.cwd(), 'public/theme-init.js'), 'utf8')
+
+  it('reads the same key and media query as the app', () => {
+    expect(script).toContain(THEME_STORAGE_KEY)
+    expect(script).toContain(DARK_QUERY)
   })
 })

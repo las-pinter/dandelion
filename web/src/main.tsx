@@ -2,10 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { router } from '@/app/router'
+import { followSystemTheme } from '@/app/theme-store'
 import { registerServiceWorker } from '@/lib/pwa'
 import './index.css'
 
 registerServiceWorker()
+followSystemTheme()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('index.html has no #root element')

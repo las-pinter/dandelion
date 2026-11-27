@@ -1,11 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { THEME_STORAGE_KEY } from '@/app/theme'
+import { chooseTheme, resetThemeStore } from '@/app/theme-store'
 import { ThemeToggle } from './ThemeToggle'
 
 beforeEach(() => {
-  document.documentElement.classList.add('dark')
   localStorage.clear()
+  document.documentElement.classList.add('dark')
+  chooseTheme('dark')
+  resetThemeStore()
 })
 
 afterEach(() => {

@@ -23,11 +23,11 @@ function themeOf(element: HTMLElement) {
   const styles = getComputedStyle(element)
   const color = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback
   return {
-    background: color('--background', '#07090d'),
-    foreground: color('--foreground', '#e8ecf2'),
-    cursor: color('--primary', '#d9f75a'),
-    cursorAccent: color('--background', '#07090d'),
-    selectionBackground: color('--secondary', '#1a2028'),
+    background: color('--background', '#f4f4f2'),
+    foreground: color('--foreground', '#16181b'),
+    cursor: color('--primary', '#1b1d20'),
+    cursorAccent: color('--background', '#f4f4f2'),
+    selectionBackground: color('--secondary', '#ececea'),
   }
 }
 
@@ -63,6 +63,7 @@ export function XtermPane({
     let terminal: Terminal | null = null
     let socket: WebSocket | null = null
     let observer: ResizeObserver | null = null
+    let themeWatch: MutationObserver | null = null
     let input: { dispose: () => void } | null = null
     let opened = false
     let failure: string | undefined
@@ -177,6 +178,16 @@ export function XtermPane({
         ws.send(resizeMessage(view.cols, view.rows))
       })
       observer.observe(element)
+
+      // A theme flip rewrites the tokens on <html>; xterm keeps its own palette,
+      // so it has to be read again or the pane stays on the old colours.
+      themeWatch = new MutationObserver(() => {
+        view.options.theme = themeOf(element)
+      })
+      themeWatch.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+      })
     }
 
     // One tick late, so React's development double-invoke mounts the socket
@@ -188,6 +199,7 @@ export function XtermPane({
       clearTimeout(timer)
       element.removeEventListener('scroll', onScroll)
       observer?.disconnect()
+      themeWatch?.disconnect()
       input?.dispose()
       socket?.close()
       terminal?.dispose()

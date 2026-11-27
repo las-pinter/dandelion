@@ -122,7 +122,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
       }
       actions={
         !expanded && (
-          <Button ref={trigger} size="xs" variant="ghost" onClick={() => setExpanded(true)}>
+          <Button ref={trigger} size="xs" variant="outline" onClick={() => setExpanded(true)}>
             Full screen
           </Button>
         )
@@ -166,7 +166,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
           <>
             <Button
               size="xs"
-              variant={blocked ? 'default' : 'ghost'}
+              variant={blocked ? 'default' : 'outline'}
               disabled={inFlight('approve') || !blocked}
               title={blocked ? undefined : 'no prompt is waiting'}
               onClick={() => onAct({ kind: 'approve' })}
@@ -175,7 +175,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
             </Button>
             <Button
               size="xs"
-              variant={blocked ? 'outline' : 'ghost'}
+              variant={blocked ? 'outline' : 'quiet'}
               disabled={inFlight('deny') || !blocked}
               onClick={() => onAct({ kind: 'deny' })}
             >
@@ -193,8 +193,7 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
         </Button>
         <Button
           size="xs"
-          variant="ghost"
-          className="text-muted-foreground hover:text-destructive"
+          variant="destructive"
           disabled={inFlight('kill')}
           onClick={() => setConfirmKill(true)}
         >
@@ -209,14 +208,14 @@ export function AgentDetail({ agent, claude, busy, onAct }: AgentDetailProps) {
         tabIndex={expanded ? -1 : undefined}
         className={
           expanded
-            ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-2xl border bg-popover p-4 text-popover-foreground shadow-2xl focus:outline-none'
+            ? 'fixed inset-2 z-50 flex flex-col gap-2 overscroll-contain rounded-xl border bg-popover p-4 text-popover-foreground shadow-[0_12px_32px_rgb(0_0_0/0.2)] focus:outline-none'
             : 'flex min-h-0 flex-1 flex-col'
         }
       >
         {expanded && (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="min-w-0 truncate text-sm font-semibold">{agentLabel(agent)}</p>
-            <Button size="xs" variant="ghost" onClick={() => setExpanded(false)}>
+            <Button size="xs" variant="outline" onClick={() => setExpanded(false)}>
               Exit full screen
             </Button>
           </div>

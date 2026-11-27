@@ -15,8 +15,8 @@ export interface MetricCardProps {
 export function MetricCard({ label, value, unit, sparkline, hint, className }: MetricCardProps) {
   const points = sparkline ? sparklinePoints(sparkline) : ''
   return (
-    <div className={cn('rounded-2xl border bg-card p-4 text-card-foreground', className)}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className={cn('rounded-xl border bg-card p-4 text-card-foreground', className)}>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 flex items-baseline gap-1 font-mono">
         <span className="text-2xl font-semibold tabular-nums">{value}</span>
         {unit && <span className="text-xs text-muted-foreground">{unit}</span>}

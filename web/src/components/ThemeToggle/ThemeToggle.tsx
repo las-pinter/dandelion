@@ -1,27 +1,25 @@
 import { Moon, Sun } from 'lucide-react'
-import { useState } from 'react'
-import { applyTheme, currentTheme, storeTheme, type Theme } from '@/app/theme'
+import type { Theme } from '@/app/theme'
+import { chooseTheme, useTheme } from '@/app/theme-store'
 import { Button } from '@/components/ui/button'
 
-/** Switch between the dark default and the light alternate, remembering the choice. */
+/**
+ * Switch between light and dark, remembering the choice. Until the owner
+ * chooses, the app follows the OS; the toggle shows whichever theme is on.
+ */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => currentTheme())
+  const theme = useTheme()
   const next: Theme = theme === 'dark' ? 'light' : 'dark'
-
-  function toggle() {
-    applyTheme(next)
-    storeTheme(next)
-    setTheme(next)
-  }
 
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="outline"
       size="icon"
       className="size-11"
-      onClick={toggle}
+      onClick={() => chooseTheme(next)}
       aria-label={`Switch to ${next} theme`}
+      title={`Switch to the ${next} theme`}
     >
       {theme === 'dark' ? <Sun aria-hidden /> : <Moon aria-hidden />}
     </Button>

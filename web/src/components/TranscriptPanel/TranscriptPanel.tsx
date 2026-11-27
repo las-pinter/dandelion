@@ -191,7 +191,7 @@ export function TranscriptView({
           <div ref={content} className="flex w-full max-w-[84ch] shrink-0 flex-col gap-6">
             {hasEarlier && (
               <div className="text-center">
-                <Button variant="ghost" size="xs" onClick={onLoadEarlier}>
+                <Button variant="outline" size="xs" onClick={onLoadEarlier}>
                   Load earlier
                 </Button>
               </div>
@@ -328,7 +328,7 @@ function BlockView({
             <span className="shrink-0 font-mono font-medium">{block.name}</span>
             <span className="min-w-0 truncate text-muted-foreground">{block.summary}</span>
           </summary>
-          <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-background/70 p-2 whitespace-pre-wrap font-mono">
+          <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-muted p-2 whitespace-pre-wrap font-mono">
             {block.input}
           </pre>
           {result && (
