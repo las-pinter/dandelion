@@ -23,6 +23,7 @@ base64.workspace = true
 clap.workspace = true
 dandelion-claude.workspace = true
 dandelion-core.workspace = true
+dandelion-documents.workspace = true
 dandelion-pty.workspace = true
 dandelion-sysmon.workspace = true
 dandelion-system.workspace = true

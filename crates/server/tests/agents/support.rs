@@ -5,6 +5,7 @@
 
 #![allow(dead_code)] // each test binary uses a subset
 
+use dandelion_documents::Documents;
 use std::{net::SocketAddr, time::Duration};
 
 use crate::fake::{COOKIE, FakeBackend, ORIGIN, TERMINAL};
@@ -63,6 +64,7 @@ pub async fn state_with_claude(agents: Agents, claude: ClaudeMonitor) -> AppStat
         Containers::disabled(),
         agents,
         claude,
+        Documents::disabled(),
     )
 }
 

@@ -195,6 +195,28 @@ stored, like every other typed input. Starting an agent means running a
 command line in a directory, usually a worktree path; herdr-core has no
 workspace object of its own.
 
+## Documents
+
+The Documents page shows documents that tools on this machine write (HTML
+one-pagers, slide decks, Markdown summaries) without Dandelion knowing the
+tool. An installed tool declares a collection with a JSON manifest in
+`~/.config/dandelion/plugins/<id>.json`; the page lists every valid
+collection, grouped by the capture values the manifest names, and a manifest
+that breaks a rule becomes a warning row instead of failing the page.
+Manifests are data: Dandelion never loads or runs plugin code, and the list
+refreshes when the page opens and on a button.
+
+HTML documents are untrusted: the file route answers with a
+`Content-Security-Policy: sandbox allow-scripts` that denies network, and the
+app frames the document with `sandbox="allow-scripts"`, so its scripts run in
+an opaque origin that cannot call the API or read the session cookie.
+Markdown is fetched as text and rendered in the app with raw HTML disabled.
+Every requested path is resolved against the manifest's root and include
+patterns; `..`, absolute paths, unlisted files, and symlinks answer 404, and a
+file above 8 MiB answers 413. The format is documented in
+[`docs/tech/documents-manifest.md`](docs/tech/documents-manifest.md), and
+`DANDELION_PLUGINS_DIR` moves the manifest folder for tests.
+
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).
 

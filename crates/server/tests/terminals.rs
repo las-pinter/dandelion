@@ -3,6 +3,7 @@
 //! These spawn real `/bin/sh` shells on real pseudo-terminals, which every
 //! supported CI runner provides, so the round trip is exercised end to end.
 
+use dandelion_documents::Documents;
 use std::{net::SocketAddr, time::Duration};
 
 use axum::{
@@ -59,6 +60,7 @@ async fn test_state() -> AppState {
         Containers::disabled(),
         Agents::disabled(),
         ClaudeMonitor::disabled(),
+        Documents::disabled(),
     )
 }
 

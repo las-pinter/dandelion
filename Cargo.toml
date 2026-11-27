@@ -19,6 +19,7 @@ bollard = "0.21.1"
 clap = { version = "4.6.9", features = ["derive"] }
 dandelion-claude = { path = "crates/claude" }
 dandelion-core = { path = "crates/core" }
+dandelion-documents = { path = "crates/documents" }
 dandelion-pty = { path = "crates/pty" }
 dandelion-sysmon = { path = "crates/sysmon" }
 dandelion-system = { path = "crates/system" }

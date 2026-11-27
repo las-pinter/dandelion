@@ -9,6 +9,7 @@ use axum::{
     http::{Method, Request, StatusCode, header},
     response::Response,
 };
+use dandelion_documents::Documents;
 use dandelion_server::{
     agents::Agents,
     app::build_router,
@@ -48,6 +49,7 @@ async fn state_with(containers: Containers) -> AppState {
         containers,
         Agents::disabled(),
         ClaudeMonitor::disabled(),
+        Documents::disabled(),
     )
 }
 

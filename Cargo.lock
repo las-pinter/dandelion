@@ -765,6 +765,18 @@ name = "dandelion-core"
 version = "1.0.0"
 
 [[package]]
+name = "dandelion-documents"
+version = "1.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
 name = "dandelion-pty"
 version = "1.0.0"
 dependencies = [
@@ -786,6 +798,7 @@ dependencies = [
  "clap",
  "dandelion-claude",
  "dandelion-core",
+ "dandelion-documents",
  "dandelion-pty",
  "dandelion-sysmon",
  "dandelion-system",

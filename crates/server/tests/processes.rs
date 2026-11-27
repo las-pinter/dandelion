@@ -4,6 +4,7 @@
 //! `sleep` child. A refused request still writes one audit row, so an attempt
 //! is visible when nothing changed.
 
+use dandelion_documents::Documents;
 use std::{process::Command, time::Duration};
 
 use axum::{
@@ -51,6 +52,7 @@ async fn test_state() -> AppState {
         Containers::disabled(),
         Agents::disabled(),
         ClaudeMonitor::disabled(),
+        Documents::disabled(),
     )
 }
 

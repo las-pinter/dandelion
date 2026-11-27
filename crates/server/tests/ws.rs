@@ -13,6 +13,7 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
+use dandelion_documents::Documents;
 use dandelion_server::{
     agents::Agents,
     app::build_router,
@@ -62,6 +63,7 @@ async fn test_state(hub: Hub) -> AppState {
         Containers::disabled(),
         Agents::disabled(),
         ClaudeMonitor::disabled(),
+        Documents::disabled(),
     )
 }
 

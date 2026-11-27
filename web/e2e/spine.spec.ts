@@ -216,3 +216,38 @@ test('the agent card holds its composer at every size', async ({ page }) => {
     }
   }
 })
+
+test('a document renders in an opaque-origin sandbox that cannot reach the API', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/login$/)
+  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+
+  await page.goto('/documents')
+  await expect(page.getByRole('heading', { name: 'Probe visuals' })).toBeVisible()
+
+  // HTML documents go through the sandboxed frame; the fixture page tries a
+  // public API route and reports its own verdict from inside the frame.
+  await page.getByRole('button', { name: /Sandbox probe/ }).click()
+  const frame = page.locator('iframe')
+  await expect(frame).toHaveAttribute('sandbox', 'allow-scripts')
+  await expect(frame).toHaveAttribute('sandbox', /^(?!.*allow-same-origin).*$/)
+  await expect(page.frameLocator('iframe').getByTestId('verdict')).toHaveText('BLOCKED')
+
+  // The route itself answers with the CSP that creates the opaque origin.
+  const response = await page.request.get(
+    '/api/documents/probe-visuals/file?path=d%2Fsandbox-probe.html',
+  )
+  const policy = response.headers()['content-security-policy'] ?? ''
+  expect(policy).toContain('sandbox allow-scripts')
+  expect(policy).not.toContain('allow-same-origin')
+  expect(policy).toContain("connect-src 'none'")
+
+  // Markdown renders in the app instead of a frame.
+  await page.getByRole('button', { name: /Probe notes/ }).click()
+  await expect(page.getByRole('heading', { name: 'Probe notes', level: 1 })).toBeVisible()
+  await expect(page.locator('iframe')).toHaveCount(0)
+})
