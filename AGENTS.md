@@ -50,6 +50,7 @@ it after each edit batch: a type error or a formatting slip otherwise fails
 
 - Rust: workspace lints (clippy pedantic, `unsafe` forbidden) apply to every crate via `[lints] workspace = true`. Errors are `thiserror` types in libraries, `anyhow` only in the binary.
 - Web: strict TypeScript, no `any`. Style through Tailwind and the design tokens in `web/src/styles/tokens.css`; follow `docs/design.md`.
-- Files stay under 500 lines; split by responsibility before that.
+- Files stay under 500 lines, and integration test files under 700; split by
+  responsibility before that.
 - Every mutating API action writes an audit log entry.
 - Tests sit next to the code: Rust `#[cfg(test)]` modules or `crates/<domain>/tests/`, web `*.test.ts(x)` beside the source.
