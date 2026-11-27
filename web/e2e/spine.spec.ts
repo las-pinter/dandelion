@@ -60,7 +60,9 @@ test('setup registers a passkey and a password, and the dashboard goes live', as
   const cpu = page.getByText('CPU', { exact: true }).locator('..')
   await expect(cpu.locator('span').first()).toHaveText(/\d/)
 
-  await page.getByRole('link', { name: 'Agents' }).click()
+  // The dashboard's Agents panel links here too ("Open agents"), so the name
+  // must match the nav link exactly.
+  await page.getByRole('link', { name: 'Agents', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Agents', level: 1 })).toBeVisible()
 
   await page.getByRole('link', { name: 'Processes' }).click()

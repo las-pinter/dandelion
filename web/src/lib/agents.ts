@@ -112,7 +112,8 @@ export function claudeSummary(session: ClaudeAgent): ClaudeSummary {
   }
 }
 
-function waitingLabel(waitingFor: string | null | undefined): string | null {
+/** What a waiting Claude session waits for, as a short phrase. */
+export function waitingLabel(waitingFor: string | null | undefined): string | null {
   switch (waitingFor) {
     case 'permission prompt':
       return 'a permission prompt'

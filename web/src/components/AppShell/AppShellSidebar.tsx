@@ -1,29 +1,47 @@
 import { NavLink } from 'react-router'
 import type { PageDefinition } from '@/app/page-registry'
 import { cn } from '@/lib/utils'
-import { StatusDot } from '@/components/StatusDot/StatusDot'
+import { useLiveSample, type LiveSampleState } from '@/hooks/use-live-sample'
+import { formatBytes } from '@/lib/metrics'
 
 export interface AppShellSidebarProps {
   pages: PageDefinition[]
+  /** A fixed host reading; stories pass one, the app streams it. */
+  host?: LiveSampleState
 }
 
-function HostCard() {
+/** The machine's own numbers, live: the shell is on every page. */
+function HostCard({ snapshot, connected }: LiveSampleState) {
+  const cores = snapshot?.cpu.per_core_percent.length
   return (
     <div className="m-3 rounded-xl border border-sidebar-border bg-card p-3">
       <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
         Host
       </p>
-      <p className="mt-1 truncate font-mono text-sm font-medium">dandelion</p>
+      <p className="mt-1 truncate font-mono text-sm font-medium">
+        {snapshot && cores !== undefined
+          ? `${cores} cores · ${formatBytes(snapshot.memory.total_bytes)}`
+          : 'Reading the machine…'}
+      </p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <StatusDot status="idle" withLabel />
-        <span className="font-mono text-xs text-muted-foreground">8 cores · 15.2 GiB</span>
+        <span className="font-mono text-xs text-muted-foreground">
+          {snapshot ? `${formatBytes(snapshot.memory.used_bytes)} used` : '—'}
+        </span>
+        <span className="truncate font-mono text-xs text-muted-foreground">
+          {connected ? 'Live' : 'Connecting…'}
+        </span>
       </div>
     </div>
   )
 }
 
+/** The host card with no socket; the app streams, stories pass a reading. */
+function StreamedHostCard() {
+  return <HostCard {...useLiveSample()} />
+}
+
 /** Desktop navigation: brand, registry-driven links, and the host card. */
-export function AppShellSidebar({ pages }: AppShellSidebarProps) {
+export function AppShellSidebar({ pages, host }: AppShellSidebarProps) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
       <div className="flex h-[var(--app-top-bar)] shrink-0 items-center gap-2 border-b border-sidebar-border px-4">
@@ -58,7 +76,7 @@ export function AppShellSidebar({ pages }: AppShellSidebarProps) {
           </NavLink>
         ))}
       </nav>
-      <HostCard />
+      {host ? <HostCard {...host} /> : <StreamedHostCard />}
     </aside>
   )
 }

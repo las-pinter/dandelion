@@ -1,13 +1,26 @@
 import { useMemo, useState } from 'react'
 import { LayoutDashboard } from 'lucide-react'
-import { mockAgents } from '@/app/mock-agents'
+import { Link } from 'react-router'
 import type { PageDefinition } from '@/app/page-registry'
 import { AgentRow } from '@/components/AgentRow/AgentRow'
 import { MetricCard } from '@/components/MetricCard/MetricCard'
 import { MetricChart } from '@/components/MetricChart/MetricChart'
 import { Panel } from '@/components/Panel/Panel'
+import type { AgentStatus } from '@/components/status'
 import { Button } from '@/components/ui/button'
+import { useAgents } from '@/hooks/use-agents'
 import { useSystemMetrics } from '@/hooks/use-system-metrics'
+import {
+  agentLabel,
+  blockedLabel,
+  claudeLabel,
+  claudeUiStatus,
+  uiStatus,
+  unmanagedSessions,
+  waitingLabel,
+  type AgentInfo,
+  type ClaudeAgent,
+} from '@/lib/agents'
 import {
   formatBytes,
   formatRate,
@@ -20,6 +33,36 @@ import {
 } from '@/lib/metrics'
 
 const GIB = 1024 ** 3
+
+/** One dashboard row: a live agent, or a Claude session with no terminal. */
+interface AgentLine {
+  key: string
+  name: string
+  status: AgentStatus
+  command: string
+  detail?: string
+}
+
+function managedLine(agent: AgentInfo): AgentLine {
+  return {
+    key: agent.id,
+    name: agentLabel(agent),
+    status: uiStatus(agent),
+    command: `${agent.agent_kind ?? 'agent'} · ${agent.cwd ?? 'unknown directory'}`,
+    detail: blockedLabel(agent.agent_state) ?? agent.id,
+  }
+}
+
+function sessionLine(session: ClaudeAgent): AgentLine {
+  const waiting = waitingLabel(session.waitingFor)
+  return {
+    key: `claude:${session.sessionId}`,
+    name: claudeLabel(session),
+    status: claudeUiStatus(session),
+    command: `unmanaged claude · ${session.cwd || 'unknown directory'}`,
+    detail: waiting ? `waiting for ${waiting}` : undefined,
+  }
+}
 
 export function DashboardPage() {
   const [range, setRange] = useState<MetricsRange>('1h')
@@ -107,19 +150,35 @@ export function DashboardPage() {
         ['Hottest', '—'],
       ]
 
-  const waiting = mockAgents.filter((agent) => agent.status === 'waiting').length
-  const attention = mockAgents.filter(
-    (agent) => agent.status === 'waiting' || agent.status === 'error',
-  )
+  const agentsState = useAgents()
+  const agents = useMemo(() => {
+    const listing = agentsState.snapshot
+    return [
+      ...(listing?.agents ?? []).map(managedLine),
+      ...unmanagedSessions(listing?.claude).map(sessionLine),
+    ]
+  }, [agentsState.snapshot])
+  const waiting = agents.filter((line) => line.status === 'waiting').length
+  const attention = agents.filter((line) => line.status === 'waiting' || line.status === 'error')
+  const agentsNote = agentsState.error
+    ? agentsState.error
+    : agentsState.snapshot && !agentsState.snapshot.available
+      ? 'No terminal backend is reachable'
+      : null
 
   return (
     <div className="flex flex-col gap-4">
       {attention.length > 0 && (
         <Panel title="Needs you" description="Waiting or failed agents come first" status="waiting">
           <ul className="divide-y">
-            {attention.map((agent) => (
-              <li key={agent.name}>
-                <AgentRow {...agent} />
+            {attention.map((line) => (
+              <li key={line.key}>
+                <AgentRow
+                  name={line.name}
+                  status={line.status}
+                  command={line.command}
+                  detail={line.detail}
+                />
               </li>
             ))}
           </ul>
@@ -167,23 +226,42 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel
           title="Agents"
-          description={`${mockAgents.length} sample agents until the agents API lands`}
+          description={agentsNote ?? 'Live from the terminal backend'}
           status={waiting > 0 ? 'waiting' : 'idle'}
           actions={
-            <span className="font-mono text-xs text-muted-foreground">
-              {mockAgents.length} total
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs text-muted-foreground">{agents.length} total</span>
+              <Link
+                to="/agents"
+                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Open agents
+              </Link>
+            </div>
           }
         >
-          <ul className="divide-y">
-            {mockAgents.map((agent) => (
-              <li key={agent.name}>
-                <AgentRow {...agent} />
-              </li>
-            ))}
-          </ul>
+          {agentsState.loading && !agentsState.snapshot ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Reading agents…</p>
+          ) : agents.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {agentsNote ?? 'No agents are running.'}
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {agents.map((line) => (
+                <li key={line.key}>
+                  <AgentRow
+                    name={line.name}
+                    status={line.status}
+                    command={line.command}
+                    detail={line.detail}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
-        <Panel title="Host" description="dandelion · Linux">
+        <Panel title="Host" description="This machine · Linux">
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
             {hostRows.map(([term, value]) => (
               <div key={term} className="flex min-h-11 items-center justify-between gap-3">
