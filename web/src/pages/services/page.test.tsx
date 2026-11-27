@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ServicesState } from '@/hooks/use-services'
 import type { ServicesSnapshot, UnitScope } from '@/lib/services'
-import { ServicesPage, page } from './page'
+import { ServicesPage } from './screen'
+import { page } from './page'
 
 const { useServices } = vi.hoisted(() => ({
   useServices: vi.fn<() => ServicesState>(),

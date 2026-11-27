@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ContainersState } from '@/hooks/use-containers'
 import type { ContainerInfo, ContainersSnapshot } from '@/lib/containers'
-import { ContainersPage, page } from './page'
+import { ContainersPage } from './screen'
+import { page } from './page'
 
 const { useContainers } = vi.hoisted(() => ({
   useContainers: vi.fn<() => ContainersState>(),

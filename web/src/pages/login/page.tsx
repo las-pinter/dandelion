@@ -1,15 +1,9 @@
+import { lazy } from 'react'
 import { LogIn } from 'lucide-react'
 import type { PageDefinition } from '@/app/page-registry'
-import { AuthLayout } from '@/components/AuthLayout/AuthLayout'
-import { LoginForm } from '@/components/LoginForm/LoginForm'
 
-function LoginPage() {
-  return (
-    <AuthLayout title="Sign in" description="Use a passkey or the owner password.">
-      <LoginForm />
-    </AuthLayout>
-  )
-}
+// The screen loads on first visit; the registry keeps the metadata eager.
+const Component = lazy(() => import('./screen').then((module) => ({ default: module.LoginPage })))
 
 export const page: PageDefinition = {
   path: '/login',
@@ -17,5 +11,5 @@ export const page: PageDefinition = {
   icon: LogIn,
   order: 900,
   standalone: true,
-  Component: LoginPage,
+  Component,
 }

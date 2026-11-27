@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentsState } from '@/hooks/use-documents'
 import type { DocumentsSnapshot } from '@/lib/documents'
-import { DocumentsPage } from './page'
+import { DocumentsPage } from './screen'
 
 const { useDocuments } = vi.hoisted(() => ({ useDocuments: vi.fn<() => DocumentsState>() }))
 
