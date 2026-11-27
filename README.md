@@ -28,7 +28,9 @@ the password. A fresh Linux needs the browser's system libraries once:
 `pnpm --dir web exec playwright install --with-deps chromium`.
 
 Releases are built by CI from a `v*` tag: the workflow runs the full gate,
-then attaches the binary and its checksum to the GitHub release.
+then attaches the binary and its checksum to the GitHub release. A tag carries
+its notes in `docs/release-notes/<tag>.md`; a tag without that file fails the
+publish job rather than shipping generated filler.
 
 The server listens on `http://127.0.0.1:7443` and serves `GET /api/health`.
 `just dev-web` proxies `/api` there. Non-loopback bind addresses are refused.

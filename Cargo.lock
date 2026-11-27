@@ -750,7 +750,7 @@ dependencies = [
 
 [[package]]
 name = "dandelion-claude"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "notify",
  "serde",
@@ -762,11 +762,11 @@ dependencies = [
 
 [[package]]
 name = "dandelion-core"
-version = "0.1.0"
+version = "1.0.0"
 
 [[package]]
 name = "dandelion-pty"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "portable-pty",
  "rustix",
@@ -776,7 +776,7 @@ dependencies = [
 
 [[package]]
 name = "dandelion-server"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "argon2 0.6.0",
@@ -817,7 +817,7 @@ dependencies = [
 
 [[package]]
 name = "dandelion-sysmon"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "rustix",
  "serde",
@@ -829,7 +829,7 @@ dependencies = [
 
 [[package]]
 name = "dandelion-system"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bollard",
  "futures-util",
@@ -844,7 +844,7 @@ dependencies = [
 
 [[package]]
 name = "dandelion-terminals"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",

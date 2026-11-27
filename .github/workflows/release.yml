@@ -46,6 +46,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      # The tag carries its own notes; a tag without them fails here rather
+      # than publishing a release with generated filler.
+      - name: The tag has release notes
+        run: test -s "docs/release-notes/${GITHUB_REF_NAME}.md"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: dandelion
@@ -56,5 +63,5 @@ jobs:
           cd dist && sha256sum ./* > SHA256SUMS
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
+          body_path: docs/release-notes/${{ github.ref_name }}.md
           files: dist/*
-          generate_release_notes: true
