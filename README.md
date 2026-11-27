@@ -231,6 +231,9 @@ Dandelion is a remote root-capable shell, so the rules are strict:
 - Documents render in an opaque-origin sandbox; a manifest is data, never
   code.
 
+Report a vulnerability privately with GitHub's **Security → Report a
+vulnerability**; see [`SECURITY.md`](SECURITY.md).
+
 ## Exposure
 
 `just tailnet-serve` runs `sudo tailscale serve --bg 7443`. Writing serve
