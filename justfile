@@ -78,6 +78,10 @@ gen-check:
     just gen
     @test -z "$(git status --porcelain -- web/src/api/gen)"
 
+# Fast checks after an edit batch: format, types, lint, web tests (seconds).
+check: fmt-check typecheck lint
+    {{web}} test
+
 # Run all tests.
 test:
     cargo nextest run --workspace --locked --no-tests=warn

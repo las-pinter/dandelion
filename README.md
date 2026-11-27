@@ -15,7 +15,8 @@ corepack (pnpm), [`just`](https://github.com/casey/just), `cargo-nextest`,
 
 ```sh
 just setup   # install web dependencies and git hooks
-just ci      # the full gate: format, typecheck, lint, test, build, e2e
+just check   # fast checks: format, types, lint, web tests
+just ci      # the full gate: everything above, plus the Rust tests, build, e2e
 just e2e     # Playwright smoke suite against a scratch server on port 7444
 just gen     # regenerate the OpenAPI document and the TypeScript client
 just         # list every command

@@ -16,6 +16,10 @@ libraries once: `pnpm --dir web exec playwright install --with-deps chromium`.
 directory and fails on any working-tree change, so commit the generated files
 before running the gate.
 
+`just check` is the cheap half of the gate (format, types, lint, web tests). Run
+it after each edit batch: a type error or a formatting slip otherwise fails
+`just ci` minutes in, after the Rust build.
+
 ## Branching
 
 - Work is sequential on the long-lived `dev` branch, and `dev` is pushed
