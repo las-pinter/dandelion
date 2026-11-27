@@ -11,7 +11,8 @@ use dandelion_terminals::{ScreenText, TerminalInfo};
 use serde_json::json;
 
 use super::{
-    AgentActionRequest, AgentsError, AgentsSnapshot, SpawnAgentRequest, error_code_and_status, ws,
+    AgentAction, AgentActionRequest, AgentsError, AgentsSnapshot, SpawnAgentRequest,
+    error_code_and_status, ws,
 };
 use crate::{
     app::ApiError,
@@ -81,9 +82,17 @@ pub async fn action(
         "kind": request.action.name(),
         "outcome": outcome(&result),
     });
+    // An answer is forced past herdr's blocked guard, so it gets its own
+    // action name. Only the target and the outcome are stored: the answer
+    // text is typed input and never audited, like a prompt.
+    let audit_action = if matches!(request.action, AgentAction::Answer { .. }) {
+        "agent.answer"
+    } else {
+        "agent.action"
+    };
     record(
         &state,
-        "agent.action",
+        audit_action,
         &format!("terminal:{}", request.terminal),
         detail,
     )

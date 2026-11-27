@@ -4,6 +4,17 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AgentAction, AgentInfo, ClaudeAgent } from '@/lib/agents'
 import { AgentDetail } from './AgentDetail'
 
+vi.mock('@/hooks/use-transcript', () => ({
+  useTranscript: () => ({
+    records: [],
+    subagents: [],
+    hasEarlier: false,
+    loading: false,
+    error: null,
+    loadEarlier: () => undefined,
+  }),
+}))
+
 vi.mock('@/components/XtermPane/XtermPane', () => ({
   XtermPane: ({
     url,
@@ -85,7 +96,7 @@ describe('AgentDetail', () => {
     const pane = screen.getByTestId('xterm-pane')
     expect(pane).toHaveTextContent('ws://localhost:3000/api/agents/t7/ws')
     expect(pane).toHaveAttribute('data-readonly', 'true')
-    expect(screen.getByText('needs permission')).toBeInTheDocument()
+    expect(screen.getByText(/needs permission/)).toBeInTheDocument()
   })
 
   it('shows the Claude session, model, tokens and cost', () => {
@@ -97,6 +108,53 @@ describe('AgentDetail', () => {
     expect(screen.getByText('3.4M')).toBeInTheDocument()
     expect(screen.getByText('~$0.42')).toBeInTheDocument()
     expect(screen.getByText('a permission prompt')).toBeInTheDocument()
+  })
+
+  it('expands and collapses the view without dropping it', async () => {
+    const user = userEvent.setup()
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+    const pane = screen.getByTestId('xterm-pane')
+
+    await user.click(screen.getByRole('button', { name: 'Full screen' }))
+
+    const exit = screen.getByRole('button', { name: 'Exit full screen' })
+    expect(screen.getByRole('dialog', { name: 'Expanded agent view' })).toBeInTheDocument()
+    expect(screen.getByTestId('xterm-pane')).toBe(pane)
+
+    await user.click(exit)
+    expect(screen.getByTestId('xterm-pane')).toBe(pane)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps keyboard focus inside the expanded view, then returns it', async () => {
+    const user = userEvent.setup()
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+
+    await user.click(screen.getByRole('button', { name: 'Full screen' }))
+    const dialog = screen.getByRole('dialog', { name: 'Expanded agent view' })
+    expect(dialog).toHaveFocus()
+
+    // The trigger is behind the modal now, so tabbing must never leave it.
+    for (let press = 0; press < 40; press += 1) {
+      await user.tab()
+      expect(dialog.contains(document.activeElement)).toBe(true)
+    }
+    await user.tab({ shift: true })
+    expect(dialog.contains(document.activeElement)).toBe(true)
+
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Full screen' })).toHaveFocus()
+  })
+
+  it('closes the expanded view on Escape', async () => {
+    const user = userEvent.setup()
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+
+    await user.click(screen.getByRole('button', { name: 'Full screen' }))
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Full screen' })).toBeInTheDocument()
   })
 
   it('says why the pane could not attach', async () => {
@@ -155,5 +213,33 @@ describe('AgentDetail', () => {
     render(<AgentDetail agent={blocked} busy="t7:approve" onAct={onAct} />)
 
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled()
+  })
+})
+
+describe('AgentDetail chat surface', () => {
+  it('shows the transcript and the live strip together', () => {
+    render(<AgentDetail agent={blocked} claude={claude} onAct={() => undefined} />)
+
+    expect(screen.getByRole('log', { name: 'Transcript' })).toBeInTheDocument()
+    expect(screen.getByTestId('xterm-pane')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Terminal' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Transcript' })).toBeNull()
+  })
+
+  it('swaps the prompt for the answer bar on a question', () => {
+    render(
+      <AgentDetail
+        agent={{
+          ...blocked,
+          agent_state: { state: 'blocked', blocked_reason: 'question', progress: null },
+        }}
+        onAct={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('form', { name: 'Answer the question' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Prompt')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Interrupt' })).toBeInTheDocument()
   })
 })

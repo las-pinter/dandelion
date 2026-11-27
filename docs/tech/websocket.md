@@ -57,7 +57,7 @@ transport.
 | Topic | Payload | Cadence |
 |---|---|---|
 | `system.metrics` | `LiveSample`: `{ snapshot, point }` — the full `Snapshot` plus the compact `MetricsPoint` the server also stores | One per second while the collector runs |
-| `agents` | `{ kind: "resync", terminals: [...] }` when the server's backend subscription starts or restarts, `{ kind: "terminal", terminal, change }` per backend event, and `{ kind: "claude" }` when a Claude Code session's state or usage changes | On every backend or session change |
+| `agents` | `{ kind: "resync", terminals: [...] }` when the server's backend subscription starts or restarts, `{ kind: "terminal", terminal, change }` per backend event, `{ kind: "claude" }` when a Claude Code session's state or usage changes, and `{ kind: "backend" }` when the startup retry adopts a backend that was not up yet | On every backend or session change |
 
 A browser that subscribes later does not receive that resync; it takes its
 first paint from `GET /api/agents` and follows the topic for changes.
@@ -101,13 +101,36 @@ observer: the pane never types into or resizes the agent's real terminal, so
 control stays in the audited action API (`POST /api/agents/action`). Binary
 frames carry pane bytes both ways; text frames carry
 `{"type":"resize","cols":N,"rows":N}`, which an observer accepts without
-resizing anything. The server sends `{"type":"resized",...}` when the backend
-reports a size, and `{"type":"closed","reason":…}` or
-`{"type":"error","message":…}` before the stream ends.
+resizing anything.
+
+The stream is the agent's own screen, drawn for the agent's own width, so the
+socket starts with `{"type":"resized","cols":N,"rows":N}` carrying that size
+before any bytes. A read-only pane renders at exactly that size: it scales its
+font so those columns fit its width and keeps the live bottom row in view,
+because cursor-addressed output only lands correctly at the size it was drawn
+for. The same frame follows every real resize of the agent's terminal, and
+`{"type":"closed","reason":…}` or `{"type":"error","message":…}` ends the
+stream.
 
 `GET /api/agents/{terminal}/screen` returns the visible screen only. History is
 never read: herdr-core scrolls a full-screen program to stitch it, and
 scrolling is input to that program.
+
+## Transcript socket
+
+`GET /api/claude/{session}/transcript/ws` streams Claude Code's own transcript
+file for the agents page's transcript panel; `?agent=<id>` selects one
+subagent file. The handshake, session recheck, and logout close match the
+other sockets; browser input frames are capped at 16 KiB, and each server
+frame write has a 5 s timeout (appends are chunked at 200 records). A
+replaced file sends a fresh capped `page`. Server frames are JSON text: `{"type":"page","records":[…],
+"start":N,"hasEarlier":bool}` at open, `{"type":"appended","records":[…]}` while
+tailing, `{"type":"earlier",…}` for an older page, `{"type":"subagents",
+"items":[…]}` at open of every socket and again when the list changes (a run's
+metadata appears after its Task call), and `{"type":"error","message":…}`. The
+client sends only `{"type":"earlier"}`; the server owns the cursor. Records
+are bounded at 8 KiB per text block, nothing is stored, and the raw terminal
+stays the ground truth (ADR-0006).
 
 ## Tests
 

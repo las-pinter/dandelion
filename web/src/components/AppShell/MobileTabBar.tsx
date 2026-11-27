@@ -27,7 +27,8 @@ export function MobileTabBar({ pages }: MobileTabBarProps) {
     <>
       <nav
         aria-label="Primary mobile"
-        className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        data-app-chrome="tab"
+        className="fixed inset-x-0 bottom-0 z-40 flex min-h-[var(--app-tab-bar)] border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         {visible.map(({ path, title, icon: Icon }) => (
           <NavLink key={path} to={path} className={tabClass}>

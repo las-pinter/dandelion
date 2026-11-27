@@ -47,6 +47,14 @@ utoipa.workspace = true
 uuid.workspace = true
 webauthn-rs.workspace = true
 
+[[test]]
+name = "agents_attach"
+path = "tests/agents/attach.rs"
+
+[[test]]
+name = "agents_transcript"
+path = "tests/agents/transcript.rs"
+
 [dev-dependencies]
 async-trait.workspace = true
 dandelion-terminals = { workspace = true, features = ["test-support"] }

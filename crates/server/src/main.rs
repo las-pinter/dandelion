@@ -218,6 +218,7 @@ async fn run_server(bind: BindAddr, data_dir: Option<PathBuf>) -> Result<()> {
     );
     metrics::collector::spawn(state.clone());
     agents::spawn_publisher(state.clone());
+    agents::spawn_backend_retry(state.clone());
     dandelion_server::claude::spawn_monitor(state.clone());
     serve(bind, state).await
 }

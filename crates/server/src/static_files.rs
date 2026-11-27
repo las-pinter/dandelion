@@ -53,6 +53,15 @@ fn spa_path(requested: &str, exists: impl Fn(&str) -> bool) -> Option<&str> {
     (requested != INDEX && exists(INDEX)).then_some(INDEX)
 }
 
+/// Browser hardening for every asset the SPA serves.
+///
+/// The app renders model-authored markdown, so images may point at any https
+/// host; `Referrer-Policy: no-referrer` keeps the tailnet origin out of those
+/// requests, and the policy confines scripts to the bundle.
+const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; script-src 'self'; \
+style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; \
+connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
+
 fn asset_response(path: &str) -> Option<Response<Body>> {
     let asset = Assets::get(path)?;
     let mime = mime_guess::from_path(path)
@@ -63,6 +72,8 @@ fn asset_response(path: &str) -> Option<Response<Body>> {
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, mime)
         .header(header::CACHE_CONTROL, cache_control(path))
+        .header(header::REFERRER_POLICY, "no-referrer")
+        .header("content-security-policy", CONTENT_SECURITY_POLICY)
         .body(Body::from(asset.data.into_owned()))
         .ok()
 }

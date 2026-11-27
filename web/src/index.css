@@ -75,7 +75,15 @@
       transition-duration: 0.01ms !important;
     }
   }
+  /* Native focus and anchor scrolling stop at the bars, not under them. The
+     bottom bar exists only below `md`, so its reserve is scoped with it. */
   html {
     @apply font-sans;
+    scroll-padding-top: var(--app-scroll-offset);
+  }
+  @media (width < 48rem) {
+    html {
+      scroll-padding-bottom: var(--app-tab-bar);
+    }
   }
 }

@@ -1,21 +1,45 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Bot } from 'lucide-react'
 import type { PageDefinition } from '@/app/page-registry'
 import { AgentDetail } from '@/components/AgentDetail/AgentDetail'
 import { AgentList } from '@/components/AgentList/AgentList'
 import { Panel } from '@/components/Panel/Panel'
+import { TranscriptPanel } from '@/components/TranscriptPanel/TranscriptPanel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAgents } from '@/hooks/use-agents'
-import { claudeFor, unmanagedSessions, type AgentAction } from '@/lib/agents'
+import { claudeFor, claudeLabel, unmanagedSessions, type AgentAction } from '@/lib/agents'
 
 export function AgentsPage() {
   const { snapshot, loading, error, busy, refresh, act, spawn } = useAgents()
   const agents = snapshot?.agents ?? []
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const selected = agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null
-  const claude = claudeFor(snapshot?.claude, selected?.id)
   const unmanaged = unmanagedSessions(snapshot?.claude)
+  const unmanagedSelected =
+    selectedId?.startsWith('claude:') === true
+      ? (unmanaged.find((entry) => `claude:${entry.sessionId}` === selectedId) ?? null)
+      : null
+  const selected = unmanagedSelected
+    ? null
+    : (agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null)
+  const claude = claudeFor(snapshot?.claude, selected?.id)
+
+  const detail = useRef<HTMLDivElement>(null)
+
+  // A selected agent fills the screen: bring its panel to the top so the
+  // prompt stays visible instead of below the fold.
+  const show = (id: string) => {
+    setSelectedId(id)
+    const motion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    requestAnimationFrame(() =>
+      detail.current?.scrollIntoView?.({
+        block: 'start',
+        behavior: motion ? 'auto' : 'smooth',
+      }),
+    )
+  }
 
   const [line, setLine] = useState('claude')
   const [cwd, setCwd] = useState('')
@@ -32,7 +56,7 @@ export function AgentsPage() {
       name: name.trim() || undefined,
     })
     setSpawning(false)
-    if (info) setSelectedId(info.id)
+    if (info) show(info.id)
   }
 
   const actOnSelected = (action: AgentAction) => {
@@ -68,21 +92,36 @@ export function AgentsPage() {
           <AgentList
             agents={agents}
             unmanaged={unmanaged}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelectedId}
+            selectedId={
+              unmanagedSelected ? `claude:${unmanagedSelected.sessionId}` : (selected?.id ?? null)
+            }
+            onSelect={show}
           />
         )}
       </Panel>
 
-      {selected && (
-        <AgentDetail
-          key={selected.id}
-          agent={selected}
-          claude={claude}
-          busy={busy}
-          onAct={actOnSelected}
-        />
-      )}
+      {/* `html` carries the scroll padding that keeps a scrolled-to element
+          clear of the bars, so this wrapper needs no margin of its own. */}
+      <div ref={detail} className="flex flex-col gap-4">
+        {selected && (
+          <AgentDetail
+            key={selected.id}
+            agent={selected}
+            claude={claude}
+            busy={busy}
+            onAct={actOnSelected}
+          />
+        )}
+
+        {unmanagedSelected && (
+          <Panel
+            title={claudeLabel(unmanagedSelected)}
+            description={`Unmanaged Claude Code session · ${unmanagedSelected.cwd || 'unknown directory'}`}
+          >
+            <TranscriptPanel sessionId={unmanagedSelected.sessionId} className="h-[70vh]" />
+          </Panel>
+        )}
+      </div>
 
       <Panel
         title="Start an agent"

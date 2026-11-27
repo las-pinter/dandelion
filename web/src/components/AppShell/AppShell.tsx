@@ -2,16 +2,19 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { findPage, type PageDefinition } from '@/app/page-registry'
 import { CommandPalette } from '@/components/CommandPalette/CommandPalette'
+import type { LiveSampleState } from '@/hooks/use-live-sample'
 import { AppShellSidebar } from './AppShellSidebar'
 import { AppShellTopBar } from './AppShellTopBar'
 import { MobileTabBar } from './MobileTabBar'
 
 export interface AppShellProps {
   pages: PageDefinition[]
+  /** A fixed host reading; stories pass one, the app streams it. */
+  host?: LiveSampleState
 }
 
 /** The frame every page lives in: sidebar, top bar, mobile tabs, palette. */
-export function AppShell({ pages }: AppShellProps) {
+export function AppShell({ pages, host }: AppShellProps) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const { pathname } = useLocation()
   const active = findPage(pages, pathname)
@@ -28,7 +31,7 @@ export function AppShell({ pages }: AppShellProps) {
       >
         Skip to content
       </a>
-      <AppShellSidebar pages={pages} />
+      <AppShellSidebar pages={pages} host={host} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppShellTopBar
           title={active?.title ?? 'Dandelion'}

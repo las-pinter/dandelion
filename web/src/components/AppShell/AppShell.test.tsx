@@ -2,8 +2,46 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Activity, Bot } from 'lucide-react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
+import { vi } from 'vitest'
 import type { PageDefinition } from '@/app/page-registry'
+import type { LiveSampleState } from '@/hooks/use-live-sample'
+import { formatBytes } from '@/lib/metrics'
 import { AppShell } from './AppShell'
+
+// The host card reads live metrics; most tests need none.
+const live = vi.hoisted(() => ({
+  state: { snapshot: null, connected: false } as LiveSampleState,
+}))
+vi.mock('@/hooks/use-live-sample', () => ({ useLiveSample: () => live.state }))
+
+/** A machine reading: 10 cores, 12 GiB total, 3.3 GiB used. */
+function hostSample(): LiveSampleState {
+  return {
+    connected: true,
+    snapshot: {
+      timestamp_ms: 1_795_372_085_544,
+      uptime_secs: 94_000,
+      cpu: {
+        usage_percent: 12,
+        per_core_percent: Array.from({ length: 10 }, () => 12),
+        load: { one: 0.4, five: 0.5, fifteen: 0.6 },
+      },
+      memory: {
+        total_bytes: 12 * 1024 ** 3,
+        used_bytes: 3.3 * 1024 ** 3,
+        available_bytes: 8 * 1024 ** 3,
+        cache_bytes: 0,
+        swap_total_bytes: 0,
+        swap_used_bytes: 0,
+      },
+      disks: [],
+      network: [],
+      temperatures: [],
+      top_processes_by_cpu: [],
+      top_processes_by_memory: [],
+    },
+  }
+}
 
 const pages: PageDefinition[] = [
   { path: '/one', title: 'One', icon: Activity, order: 1, Component: () => <p>page one</p> },
@@ -51,6 +89,7 @@ afterAll(() => {
 
 beforeEach(() => {
   document.documentElement.classList.add('dark')
+  live.state = { snapshot: null, connected: false }
 })
 
 afterEach(() => {
@@ -84,7 +123,17 @@ describe('AppShell', () => {
     const nav = screen.getByRole('navigation', { name: 'Primary' })
     expect(within(nav).getByRole('link', { name: 'Two, 3 notifications' })).toBeInTheDocument()
     expect(screen.getByText('Host')).toBeInTheDocument()
-    expect(screen.getByText('dandelion')).toBeInTheDocument()
+    expect(screen.getByText('Reading the machine…')).toBeInTheDocument()
+    expect(screen.getByText('Connecting…')).toBeInTheDocument()
+  })
+
+  it('shows the live cores, memory and stream state on the host card', () => {
+    live.state = hostSample()
+    renderAt('/one')
+
+    expect(screen.getByText(`10 cores · ${formatBytes(12 * 1024 ** 3)}`)).toBeInTheDocument()
+    expect(screen.getByText(`${formatBytes(3.3 * 1024 ** 3)} used`)).toBeInTheDocument()
+    expect(screen.getByText('Live')).toBeInTheDocument()
   })
 
   it('offers a skip link to the page content', () => {

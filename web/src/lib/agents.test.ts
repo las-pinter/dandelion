@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   agentLabel,
   agentSocketUrl,
+  asksQuestion,
   blockedLabel,
   claudeFor,
   claudeLabel,
   claudeSummary,
   claudeUiStatus,
   formatTokens,
+  showLiveStrip,
   uiStatus,
   unmanagedSessions,
   type AgentInfo,
@@ -44,6 +46,26 @@ describe('agents helpers', () => {
     expect(blockedLabel({ state: 'blocked', blocked_reason: 'other' })).toBe('blocked')
     expect(blockedLabel({ state: 'idle' })).toBeNull()
     expect(blockedLabel(null)).toBeNull()
+  })
+
+  it('recognises a question block', () => {
+    expect(asksQuestion({ state: 'blocked', blocked_reason: 'question' })).toBe(true)
+    expect(asksQuestion({ state: 'blocked', blocked_reason: 'permission' })).toBe(false)
+    expect(asksQuestion({ state: 'idle' })).toBe(false)
+    expect(asksQuestion(null)).toBe(false)
+  })
+
+  it('shows the live strip through the turn unless the owner chooses', () => {
+    const working = { state: 'working' as const }
+    const idle = { state: 'idle' as const }
+    expect(showLiveStrip(working, 'auto')).toBe(true)
+    expect(showLiveStrip({ state: 'blocked', blocked_reason: 'question' }, 'auto')).toBe(true)
+    expect(showLiveStrip({ state: 'error' }, 'auto')).toBe(true)
+    expect(showLiveStrip(idle, 'auto')).toBe(false)
+    expect(showLiveStrip({ state: 'done' }, 'auto')).toBe(false)
+    expect(showLiveStrip(null, 'auto')).toBe(false)
+    expect(showLiveStrip(idle, 'shown')).toBe(true)
+    expect(showLiveStrip(working, 'hidden')).toBe(false)
   })
 
   it('names an agent by title, then id', () => {

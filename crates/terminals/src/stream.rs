@@ -113,6 +113,16 @@ impl std::fmt::Debug for AttachSession {
 }
 
 #[cfg(feature = "test-support")]
+impl EventStream {
+    /// Builds a stream over a raw test channel, so a test in another crate can
+    /// stand in for a backend's subscription.
+    #[must_use]
+    pub fn from_channel(receiver: mpsc::Receiver<Result<BackendEvent, TerminalError>>) -> Self {
+        Self::new(receiver)
+    }
+}
+
+#[cfg(feature = "test-support")]
 impl AttachSession {
     /// Builds a session over raw channels, so a test in another crate can
     /// stand in for a backend.

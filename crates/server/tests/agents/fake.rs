@@ -5,6 +5,8 @@
 //! real channel pair: the test sends output and reads the commands the socket
 //! produced.
 
+#![allow(dead_code)] // each test binary uses a subset
+
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -16,10 +18,10 @@ use dandelion_claude::ClaudePaths;
 use dandelion_server::claude::ClaudeMonitor;
 use dandelion_terminals::{
     Access, AgentKind, AgentState, AgentStatus, AttachCommand, AttachEvent, AttachMode,
-    AttachOptions, AttachSession, BackendDescriptor, BackendKind, BlockedReason, EventStream,
-    InterruptOutcome, InterruptResult, KeyName, ReadOptions, ScreenText, SendOptions, SendOutcome,
-    SpawnSpec, TerminalBackend, TerminalError, TerminalFilter, TerminalId, TerminalInfo,
-    TerminalLifecycle, TerminalSize,
+    AttachOptions, AttachSession, BackendDescriptor, BackendEvent, BackendKind, BlockedReason,
+    EventStream, InterruptOutcome, InterruptResult, KeyName, ReadOptions, Resync, ScreenText,
+    SendOptions, SendOutcome, SpawnSpec, TerminalBackend, TerminalError, TerminalFilter,
+    TerminalId, TerminalInfo, TerminalLifecycle, TerminalSize,
 };
 use tokio::sync::mpsc;
 
@@ -30,8 +32,18 @@ pub const TERMINAL: &str = "t7";
 /// A synthetic Claude state directory with one waiting session in `t7`.
 pub struct ClaudeFixture {
     /// Keeps the directory alive for the monitor's lifetime.
-    _directory: tempfile::TempDir,
+    pub directory: tempfile::TempDir,
     pub monitor: ClaudeMonitor,
+}
+
+impl ClaudeFixture {
+    /// The transcript file the fixture session writes.
+    #[must_use]
+    pub fn transcript(&self) -> std::path::PathBuf {
+        self.directory
+            .path()
+            .join("claude/projects/-work-example/session-424242.jsonl")
+    }
 }
 
 pub fn claude_fixture() -> ClaudeFixture {
@@ -57,11 +69,27 @@ pub fn claude_fixture() -> ClaudeFixture {
     fs::write(
         project.join("session-424242.jsonl"),
         concat!(
-            r#"{"type":"assistant","message":{"id":"msg_1","model":"claude-opus-5-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":100,"cache_creation_input_tokens":2}}}"#,
+            r#"{"type":"user","message":{"role":"user","content":"hello there"}}"#,
+            "\n",
+            r#"{"type":"assistant","message":{"id":"msg_1","content":[{"type":"text","text":"on it"}],"model":"claude-opus-5-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":100,"cache_creation_input_tokens":2}}}"#,
             "\n"
         ),
     )
     .expect("transcript");
+
+    // One subagent run, so the transcript socket can list it.
+    let subagents = project.join("session-424242").join("subagents");
+    fs::create_dir_all(&subagents).expect("subagent dir");
+    fs::write(
+        subagents.join("agent-a1.jsonl"),
+        "{\"type\":\"user\",\"message\":{\"content\":\"sub work\"}}\n",
+    )
+    .expect("subagent transcript");
+    fs::write(
+        subagents.join("agent-a1.meta.json"),
+        r#"{"toolUseId":"toolu_x","description":"probe","finished":true}"#,
+    )
+    .expect("subagent meta");
 
     let proc_root = temporary.path().join("proc");
     let proc_dir = proc_root.join("424242");
@@ -88,7 +116,7 @@ pub fn claude_fixture() -> ClaudeFixture {
 
     let paths = ClaudePaths::new(&claude_dir).with_proc_root(&proc_root);
     ClaudeFixture {
-        _directory: temporary,
+        directory: temporary,
         monitor: ClaudeMonitor::from_paths(paths),
     }
 }
@@ -103,6 +131,7 @@ pub enum Behaviour {
 #[derive(Debug, Default)]
 pub struct Recorded {
     pub texts: Vec<(String, String)>,
+    pub send_options: Vec<SendOptions>,
     pub keys: Vec<(String, Vec<String>)>,
     pub interrupted: Vec<String>,
     pub killed: Vec<String>,
@@ -211,7 +240,19 @@ impl TerminalBackend for FakeBackend {
     }
 
     async fn subscribe(&self, _filter: &TerminalFilter) -> Result<EventStream, TerminalError> {
-        Err(TerminalError::Unsupported("subscribe".to_owned()))
+        // One resync, then the stream ends; the publisher resubscribes later.
+        let (sender, receiver) = mpsc::channel(1);
+        let resync = BackendEvent::Resync(Resync {
+            seq: 1,
+            terminals: vec![Self::terminal()],
+        });
+        sender
+            .send(Ok(resync))
+            .await
+            .map_err(|_| TerminalError::Closed)?;
+        drop(sender);
+
+        Ok(EventStream::from_channel(receiver))
     }
 
     async fn read(
@@ -231,18 +272,20 @@ impl TerminalBackend for FakeBackend {
         &self,
         id: &TerminalId,
         text: &str,
-        _options: SendOptions,
+        options: SendOptions,
     ) -> Result<SendOutcome, TerminalError> {
         match self.behaviour {
-            Behaviour::Blocked => return Err(TerminalError::Blocked("permission".to_owned())),
+            // herdr refuses a blocked program unless the caller forces the
+            // send, which is what answering a dialog does.
+            Behaviour::Blocked if !options.force => {
+                return Err(TerminalError::Blocked("permission".to_owned()));
+            }
             Behaviour::Missing => return Err(TerminalError::NotFound(id.to_string())),
-            Behaviour::Normal => {}
+            Behaviour::Normal | Behaviour::Blocked => {}
         }
-        self.recorded
-            .lock()
-            .expect("recorded")
-            .texts
-            .push((id.to_string(), text.to_owned()));
+        let mut recorded = self.recorded.lock().expect("recorded");
+        recorded.texts.push((id.to_string(), text.to_owned()));
+        recorded.send_options.push(options);
         Ok(SendOutcome {
             started: Some(true),
             status: None,

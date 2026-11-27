@@ -91,7 +91,16 @@ describe('AgentList', () => {
     expect(screen.getByText('unmanaged')).toBeInTheDocument()
     expect(screen.getByText('session abcdef12')).toBeInTheDocument()
     expect(screen.getByText('/tmp/plain-shell')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'session abcdef12' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'session abcdef12' })).toBeInTheDocument()
+  })
+
+  it('opens an unmanaged session on click', async () => {
+    const user = userEvent.setup()
+    const { onSelect } = setup([blocked], null, [unmanaged])
+
+    await user.click(screen.getByRole('button', { name: 'session abcdef12' }))
+
+    expect(onSelect).toHaveBeenCalledWith('claude:abcdef12-0000-0000-0000-000000000000')
   })
 
   it('reports an empty list', () => {

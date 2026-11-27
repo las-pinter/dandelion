@@ -138,5 +138,14 @@ uninstall:
 backup *args:
     @set -a; [ -r ~/.config/dandelion/env ] && . ~/.config/dandelion/env; set +a; ~/.local/bin/dandelion backup {{args}}
 
+# End-to-end smoke tests in Chromium against a scratch data directory.
+# A fresh Linux installs the browser's system libraries once:
+#   pnpm --dir web exec playwright install --with-deps chromium
+e2e:
+    {{web}} exec playwright install chromium
+    {{web}} build
+    cargo build --locked -p dandelion-server
+    bash scripts/e2e.sh
+
 # The full gate. CI runs exactly this; run it before every push.
-ci: fmt-check typecheck gen-check lint test deny build
+ci: fmt-check typecheck gen-check lint test deny build e2e

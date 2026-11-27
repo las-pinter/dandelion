@@ -1,11 +1,13 @@
 //! The agent attach socket: raw pane bytes and agent state in one stream.
+//!
+//! Read-only by design: the pane observes the agent, and browser input or
+//! resizes are dropped here so control stays in the audited action API.
 
 use std::time::Duration;
 
 use axum::extract::ws::{Message, WebSocket};
-use dandelion_terminals::{AttachEvent, TerminalSize};
+use dandelion_terminals::AttachEvent;
 use futures_util::{SinkExt, StreamExt};
-use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::broadcast::error::RecvError;
 
@@ -14,18 +16,11 @@ use crate::{
     state::AppState,
 };
 
-/// Largest frame accepted from the browser.
+/// Largest frame accepted from the browser. Frames are read and discarded:
+/// the attach socket never forwards them.
 pub const MAX_INPUT_BYTES: usize = 64 * 1024;
 /// How often the socket revalidates its session.
 const SESSION_RECHECK: Duration = Duration::from_secs(30);
-
-/// Control messages a browser may send as text frames.
-#[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum Control {
-    /// Applies a new size to the attached terminal.
-    Resize { cols: u16, rows: u16 },
-}
 
 /// Attaches to one agent and pumps bytes until either side leaves.
 pub async fn connection(socket: WebSocket, state: AppState, user: RequestUser, terminal: String) {
@@ -80,21 +75,11 @@ pub async fn connection(socket: WebSocket, state: AppState, user: RequestUser, t
             frame = stream.next() => {
                 let Some(Ok(message)) = frame else { break };
                 match message {
-                    Message::Binary(data) => {
-                        if session.input(data.to_vec()).await.is_err() {
-                            break;
-                        }
-                    }
-                    Message::Text(text) => match serde_json::from_str::<Control>(text.as_str()) {
-                        Ok(Control::Resize { cols, rows }) => {
-                            if session.resize(TerminalSize { cols, rows }).await.is_err() {
-                                break;
-                            }
-                        }
-                        Err(_) => {}
-                    },
+                    // The pane is observe-only: browser input and resizes are
+                    // dropped here, not just in the backend, so control stays
+                    // in the audited action API.
+                    Message::Binary(_) | Message::Text(_) | Message::Ping(_) | Message::Pong(_) => {}
                     Message::Close(_) => break,
-                    Message::Ping(_) | Message::Pong(_) => {}
                 }
             }
             _ = recheck.tick() => {

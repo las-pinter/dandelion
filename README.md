@@ -15,13 +15,27 @@ corepack (pnpm), [`just`](https://github.com/casey/just), `cargo-nextest`,
 
 ```sh
 just setup   # install web dependencies and git hooks
-just ci      # the full gate: format, typecheck, lint, test, build
+just ci      # the full gate: format, typecheck, lint, test, build, e2e
+just e2e     # Playwright smoke suite against a scratch server on port 7444
 just gen     # regenerate the OpenAPI document and the TypeScript client
 just         # list every command
 ```
 
+The end-to-end suite drives Chromium against a real server and a scratch data
+directory under `target/`: it completes the setup ceremony with a browser
+virtual authenticator, checks the dashboard's live stream, and signs in with
+the password. A fresh Linux needs the browser's system libraries once:
+`pnpm --dir web exec playwright install --with-deps chromium`.
+
+Releases are built by CI from a `v*` tag: the workflow runs the full gate,
+then attaches the binary and its checksum to the GitHub release. A tag carries
+its notes in `docs/release-notes/<tag>.md`; a tag without that file fails the
+publish job rather than shipping generated filler.
+
 The server listens on `http://127.0.0.1:7443` and serves `GET /api/health`.
 `just dev-web` proxies `/api` there. Non-loopback bind addresses are refused.
+The app registers a lifecycle-only service worker, so it can be installed to
+a home screen; nothing is cached and no request is intercepted.
 
 ## Install and operations
 
@@ -149,17 +163,36 @@ open at once.
 The Agents page lists live agents from herdr-core (classic herdr is the
 fallback), shows each one's state and blocked reason, streams its pane over a
 dedicated socket, and sends a prompt, approves or denies a waiting prompt,
-interrupts, kills, or starts a new agent in a working directory. The pane is
-read-only: viewing must not resize the agent's real terminal, so control goes
-through the audited action API. State changes arrive on the `agents` WebSocket
-topic. When a session's Claude Code state directory is readable, the detail
+interrupts, kills, or starts a new agent in a working directory. A selected
+agent is one chat surface: the transcript as history, the live terminal strip
+where the turn happens, and the prompt at the bottom. The strip opens when a
+prompt is sent, stays while the agent works, is blocked, or has failed, and
+collapses once it is idle or done; a toggle shows or hides it at any time. The
+strip draws the agent's own terminal size, scaling the text to fit the strip's
+width (never smaller than a readable size; wider terminals keep their right
+columns outside the view) and keeps the live bottom row in view, so its
+cursor-addressed output is never scrambled. The pane is read-only: viewing
+must not resize the agent's real terminal, so control goes through the audited
+action API. State changes arrive on the `agents` WebSocket topic. If no
+terminal backend answers at startup, a background retry adopts one when it
+appears, so a reboot needs no manual restart. A session with a discoverable
+transcript renders it in the chat: rendered markdown, collapsed thinking and
+tool calls, and nested subagents, streamed
+read-only from Claude Code's file and never stored. When a session's Claude
+Code state directory is readable, the detail
 panel also shows the session id, model, token totals, estimated cost, and what
 a waiting session waits for; those totals come from tailing the transcript for
 accounting fields only. A Claude session started outside herdr (a plain shell)
-still appears in the list, marked unmanaged and listed without controls. herdr-core has no approve call, so approval presses
-Enter and denial presses Escape. Starting an agent means
-running a command line in a directory, usually a worktree path; herdr-core has
-no workspace object of its own.
+still appears in the list, marked unmanaged, without controls; selecting one
+shows its transcript and nothing else.
+herdr-core has no approve call, so approval presses Enter and denial presses
+Escape. When the agent is blocked on a question, the prompt box gives way to an
+answer bar: Up and Down move the highlight, Accept sends Enter, Skip sends
+Escape, and a typed answer is forced into the dialog through the `answer`
+action. That action is audited with its target only; the typed answer is never
+stored, like every other typed input. Starting an agent means running a
+command line in a directory, usually a worktree path; herdr-core has no
+workspace object of its own.
 
 Contributor and agent conventions: [`AGENTS.md`](AGENTS.md).
 Architecture decisions: [`docs/adr/`](docs/adr/).

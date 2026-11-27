@@ -21,4 +21,5 @@ pub mod state;
 pub mod static_files;
 pub mod storage;
 pub mod terminal;
+pub mod transcript;
 pub mod ws;

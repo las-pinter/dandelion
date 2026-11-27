@@ -77,6 +77,18 @@ drwxrwxr-x        Nov 22 20:28 <session-id>/subagents/agent-<id>.jsonl (+ .meta.
 drwxrwxr-x                     .../tool-results/
 ```
 
+A subagent's metadata file `agent-<id>.meta.json` was verified on 2026-11-25
+against live files: `{"agentType","isBuiltIn","description","toolUseId",
+"spawnDepth","requestShape","requestNonInteractive","model",
+"pickedEffortModel","finished"}`. `toolUseId` matches the `Task` tool-use id
+in the parent's transcript, which is how the transcript panel nests a run.
+
+Every run of a session — including a run started by another run
+(`spawnDepth` 2, verified present on this machine) — keeps its transcript and
+metadata flat in `<sessionId>/subagents/`, never in a nested directory. A
+subagent's transcript therefore lists the same flat directory to find runs it
+started, and nesting follows `toolUseId` at any depth.
+
 Most robust: glob `~/.claude/projects/*/<sessionId>.jsonl` (a resumed session
 keeps its original project dir). Hooks provide `transcript_path` directly.
 

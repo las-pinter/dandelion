@@ -8,16 +8,24 @@ spawning, or sudo is **security-sensitive** and says so in its PR.
 
 ## Gate
 
-`just ci` is the gate: format check, typecheck, lint, tests, build. CI runs
-exactly the same recipe. Run `just setup` once per clone or worktree. `just`
-lists every recipe. `gen-check` regenerates the API client from an empty
+`just ci` is the gate: format check, typecheck, lint, tests, build, and the
+Playwright smoke suite. CI runs exactly the same recipe. Run `just setup` once
+per clone or worktree; a fresh Linux also needs the browser's system
+libraries once: `pnpm --dir web exec playwright install --with-deps chromium`.
+`just` lists every recipe. `gen-check` regenerates the API client from an empty
 directory and fails on any working-tree change, so commit the generated files
 before running the gate.
 
 ## Branching
 
-- Most work is sequential on the long-lived `dev` branch; commit there.
-- When a feature is done, open a PR from `dev` to `main`. `main` stays green: CI's `gate` must pass and the PR is squash-merged. After the merge, fast-forward `dev` onto `main` (`git fetch origin && git reset --hard origin/main`).
+- Work is sequential on the long-lived `dev` branch, and `dev` is pushed
+  freely: sharing work-in-progress there needs no approval.
+- `dev` -> `main` only when a release is wanted, never per feature. `main`
+  stays green: CI's `gate` must pass and the PR is squash-merged. After the
+  merge, fast-forward `dev` onto `main` (`git fetch origin && git reset --hard
+  origin/main`); a release tag comes from `main`, never from `dev`.
+- Still run `just ci` before pushing, so `dev` stays healthy enough to cut a
+  release from at any time.
 - Parallel work gets its own branch and worktree: `git worktree add ../dandelion-<slug> -b <type>/<slug>`; merge it into `dev` when done.
 - Commits follow Conventional Commits (`feat(agents): …`); the commit-msg hook enforces it. Scopes are crate or page names.
 - The layout below removes shared hotspot files. Keep it that way: when a change needs a central list, add a registration seam instead.
@@ -29,6 +37,8 @@ before running the gate.
 - `web/src/pages/<screen>/page.tsx` — a thin screen that composes components and exports `page: PageDefinition`. The page registry (`web/src/app/page-registry.ts`) discovers it: routes and navigation never need a manual edit.
 - `web/src/api/gen/` — generated from the server's OpenAPI. Regenerate it, never edit it.
 - `web/src/lib/`, `web/src/hooks/` — logic shared by several components.
+- `web/e2e/` — Playwright specs, run against a scratch server by `just e2e`;
+  `scripts/` — shell helpers the recipes call.
 - `docs/adr/` — architecture decisions. A change that alters a decision there adds a new ADR that supersedes it.
 - `docs/tech/` — verified facts about external systems (herdr API, Claude Code state).
 

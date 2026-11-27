@@ -190,6 +190,10 @@ The stream is binary frames on the main socket after `hello {framed:true}`, veri
 - `observe:true` never types or resizes. A non-observer's attach size and RESIZE resize the real terminal.
   Verified: the probe was 200x120 (headless default), 80x24 after attach, and 100x30 after RESIZE.
   It went back to 200x120 after CLOSE. Several viewers of different sizes were not tested.
+- The stream of an observer is the terminal's own screen at the terminal's own size, not at the size
+  the attach asked for: the attach reply's `terminal` carries `cols` and `rows` (verified 2026-11-26 on
+  a live 158x73 agent), and the bytes are drawn for that width. A client that renders them at a
+  different width gets cursor-addressed output in the wrong cells.
 - Detach: CLOSE (kind 2) or drop the socket (`hc attach`: Ctrl+\\). Program loss ends the stream even with `keep`; reattach after `restarted`.
 
 ```
