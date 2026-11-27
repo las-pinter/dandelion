@@ -30,7 +30,7 @@ export function DocumentsList({ snapshot, selected, onSelect, className }: Docum
   }
 
   return (
-    <div className={cn('flex flex-col gap-4', className)}>
+    <div className={cn('flex min-w-0 flex-col gap-4', className)}>
       {warnings.length > 0 && (
         <section aria-label="Skipped manifests" className="rounded-lg border border-dashed p-3">
           <h3 className="text-xs font-semibold">Skipped manifests</h3>
@@ -48,7 +48,7 @@ export function DocumentsList({ snapshot, selected, onSelect, className }: Docum
       {collections.map((collection) => {
         const Icon = documentIcon(collection.icon)
         return (
-          <section key={collection.id} aria-label={collection.name}>
+          <section key={collection.id} aria-label={collection.name} className="min-w-0">
             <header className="flex items-center gap-2">
               <Icon aria-hidden className="size-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold">{collection.name}</h3>
